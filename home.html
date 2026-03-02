@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>RPG Quests ⚔️ - Dashboard</title>
+  <link rel="stylesheet" href="css/style.css"/>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Cinzel+Decorative:wght@700&family=Lato:wght@300;400;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
+</head>
+<body class="dashboard-page">
+
+  <!-- ─── SIDEBAR ──────────────────────────────────────────────── -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-header">
+      <div class="sidebar-logo">
+        <i class="fas fa-shield-halved"></i>
+        <span>RPG Quests</span>
+      </div>
+      <button class="sidebar-toggle" id="sidebarToggle">
+        <i class="fas fa-chevron-left"></i>
+      </button>
+    </div>
+
+    <!-- User Card -->
+    <div class="sidebar-user">
+      <div class="user-avatar-wrap">
+        <img src="" alt="Avatar" id="sidebarAvatar" class="user-avatar"/>
+        <div class="user-level-badge" id="sidebarLevel">1</div>
+      </div>
+      <div class="user-info">
+        <span class="user-name" id="sidebarName">Carregando...</span>
+        <span class="user-role" id="sidebarRole">Aventureiro</span>
+      </div>
+    </div>
+
+    <!-- XP Bar -->
+    <div class="sidebar-xp">
+      <div class="xp-label">
+        <span>XP</span>
+        <span id="xpText">0 / 100</span>
+      </div>
+      <div class="xp-bar">
+        <div class="xp-fill" id="xpFill" style="width: 0%"></div>
+      </div>
+    </div>
+
+    <!-- Coins -->
+    <div class="sidebar-coins">
+      <i class="fas fa-coins"></i>
+      <span id="sidebarCoins">0</span>
+      <span class="coins-label">moedas</span>
+    </div>
+
+    <!-- Navigation -->
+    <nav class="sidebar-nav">
+      <a href="#" class="nav-item active" data-page="stats">
+        <i class="fas fa-chart-bar"></i>
+        <span>Estatísticas</span>
+      </a>
+      <a href="#" class="nav-item" data-page="quests">
+        <i class="fas fa-scroll"></i>
+        <span>Pegar Quests</span>
+        <div class="nav-badge" id="availableBadge"></div>
+      </a>
+      <a href="#" class="nav-item" data-page="myquests">
+        <i class="fas fa-list-check"></i>
+        <span>Minhas Quests</span>
+        <div class="nav-badge" id="pendingBadge"></div>
+      </a>
+      <a href="#" class="nav-item" data-page="ranking">
+        <i class="fas fa-trophy"></i>
+        <span>Ranking</span>
+      </a>
+      <a href="#" class="nav-item" data-page="profile">
+        <i class="fas fa-user-cog"></i>
+        <span>Perfil</span>
+      </a>
+      <div class="nav-divider"></div>
+      <a href="/admin.html" class="nav-item nav-admin" id="adminLink" style="display:none">
+        <i class="fas fa-crown"></i>
+        <span>Painel Admin</span>
+      </a>
+      <a href="/auth/logout" class="nav-item nav-logout">
+        <i class="fas fa-right-from-bracket"></i>
+        <span>Sair</span>
+      </a>
+    </nav>
+  </aside>
+
+  <!-- ─── MAIN CONTENT ─────────────────────────────────────────── -->
+  <main class="main-content" id="mainContent">
+
+    <!-- Topbar mobile -->
+    <div class="topbar">
+      <button class="topbar-menu" id="mobileMenuBtn">
+        <i class="fas fa-bars"></i>
+      </button>
+      <div class="topbar-title" id="topbarTitle">📊 Estatísticas</div>
+      <div class="topbar-coins">
+        <i class="fas fa-coins"></i>
+        <span id="topbarCoins">0</span>
+      </div>
+    </div>
+
+    <!-- ── PAGE: STATS ── -->
+    <section class="page active" id="page-stats">
+      <div class="page-header">
+        <h2 class="page-title"><i class="fas fa-chart-bar"></i> Estatísticas</h2>
+      </div>
+
+      <div class="stats-grid">
+        <div class="stat-card gold">
+          <div class="stat-icon"><i class="fas fa-coins"></i></div>
+          <div class="stat-info">
+            <span class="stat-value" id="statCoins">0</span>
+            <span class="stat-label">Moedas Totais</span>
+          </div>
+        </div>
+        <div class="stat-card blue">
+          <div class="stat-icon"><i class="fas fa-star"></i></div>
+          <div class="stat-info">
+            <span class="stat-value" id="statXP">0</span>
+            <span class="stat-label">XP Total</span>
+          </div>
+        </div>
+        <div class="stat-card purple">
+          <div class="stat-icon"><i class="fas fa-layer-group"></i></div>
+          <div class="stat-info">
+            <span class="stat-value" id="statLevel">1</span>
+            <span class="stat-label">Nível</span>
+          </div>
+        </div>
+        <div class="stat-card green">
+          <div class="stat-icon"><i class="fas fa-check-circle"></i></div>
+          <div class="stat-info">
+            <span class="stat-value" id="statCompleted">0</span>
+            <span class="stat-label">Quests Completas</span>
+          </div>
+        </div>
+        <div class="stat-card orange">
+          <div class="stat-icon"><i class="fas fa-fire"></i></div>
+          <div class="stat-info">
+            <span class="stat-value" id="statActive">0</span>
+            <span class="stat-label">Quests Ativas</span>
+          </div>
+        </div>
+        <div class="stat-card red">
+          <div class="stat-icon"><i class="fas fa-times-circle"></i></div>
+          <div class="stat-info">
+            <span class="stat-value" id="statRejected">0</span>
+            <span class="stat-label">Quests Rejeitadas</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- XP Progress -->
+      <div class="xp-progress-card">
+        <div class="xp-header">
+          <h3><i class="fas fa-bolt"></i> Progresso de XP</h3>
+          <span id="xpProgressText">0 / 100 XP</span>
+        </div>
+        <div class="xp-bar-large">
+          <div class="xp-fill-large" id="xpFillLarge" style="width: 0%"></div>
+          <span class="xp-percent" id="xpPercent">0%</span>
+        </div>
+        <p class="xp-hint">Próximo nível: <strong id="nextLevel">2</strong></p>
+      </div>
+
+      <!-- Coins por período -->
+      <div class="period-coins-grid">
+        <div class="period-card">
+          <i class="fas fa-sun"></i>
+          <span class="period-value" id="coinsDaily">0</span>
+          <span class="period-label">Moedas Hoje</span>
+        </div>
+        <div class="period-card">
+          <i class="fas fa-calendar-week"></i>
+          <span class="period-value" id="coinsWeekly">0</span>
+          <span class="period-label">Esta Semana</span>
+        </div>
+        <div class="period-card">
+          <i class="fas fa-calendar"></i>
+          <span class="period-value" id="coinsMonthly">0</span>
+          <span class="period-label">Este Mês</span>
+        </div>
+      </div>
+
+      <!-- Badges -->
+      <div class="badges-card">
+        <h3><i class="fas fa-award"></i> Conquistas</h3>
+        <div class="badges-grid" id="badgesGrid">
+          <p class="no-badges">Complete quests para ganhar conquistas!</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── PAGE: QUESTS ── -->
+    <section class="page" id="page-quests">
+      <div class="page-header">
+        <h2 class="page-title"><i class="fas fa-scroll"></i> Pegar Quests</h2>
+      </div>
+
+      <!-- Filtros -->
+      <div class="filter-bar">
+        <button class="filter-btn active" data-filter="all">Todas</button>
+        <button class="filter-btn" data-filter="daily"><i class="fas fa-sun"></i> Diárias</button>
+        <button class="filter-btn" data-filter="weekly"><i class="fas fa-calendar-week"></i> Semanais</button>
+        <button class="filter-btn" data-filter="monthly"><i class="fas fa-calendar"></i> Mensais</button>
+        <button class="filter-btn" data-filter="event"><i class="fas fa-star"></i> Eventos</button>
+      </div>
+
+      <div class="quests-grid" id="questsGrid">
+        <div class="loading-spinner"><i class="fas fa-spinner fa-spin"></i> Carregando quests...</div>
+      </div>
+    </section>
+
+    <!-- ── PAGE: MY QUESTS ── -->
+    <section class="page" id="page-myquests">
+      <div class="page-header">
+        <h2 class="page-title"><i class="fas fa-list-check"></i> Minhas Quests</h2>
+      </div>
+
+      <div class="filter-bar">
+        <button class="filter-btn active" data-filter="all">Todas</button>
+        <button class="filter-btn" data-filter="active"><i class="fas fa-fire"></i> Ativas</button>
+        <button class="filter-btn" data-filter="pending_review"><i class="fas fa-clock"></i> Em Análise</button>
+        <button class="filter-btn" data-filter="completed"><i class="fas fa-check"></i> Completas</button>
+        <button class="filter-btn" data-filter="rejected"><i class="fas fa-times"></i> Rejeitadas</button>
+      </div>
+
+      <div class="my-quests-list" id="myQuestsList">
+        <div class="loading-spinner"><i class="fas fa-spinner fa-spin"></i> Carregando...</div>
+      </div>
+    </section>
+
+    <!-- ── PAGE: RANKING ── -->
+    <section class="page" id="page-ranking">
+      <div class="page-header">
+        <h2 class="page-title"><i class="fas fa-trophy"></i> Ranking</h2>
+      </div>
+
+      <div class="filter-bar">
+        <button class="filter-btn active" data-period="total"><i class="fas fa-infinity"></i> Total</button>
+        <button class="filter-btn" data-period="daily"><i class="fas fa-sun"></i> Diário</button>
+        <button class="filter-btn" data-period="weekly"><i class="fas fa-calendar-week"></i> Semanal</button>
+        <button class="filter-btn" data-period="monthly"><i class="fas fa-calendar"></i> Mensal</button>
+      </div>
+
+      <div class="ranking-podium" id="rankingPodium"></div>
+      <div class="ranking-list" id="rankingList">
+        <div class="loading-spinner"><i class="fas fa-spinner fa-spin"></i> Carregando ranking...</div>
+      </div>
+    </section>
+
+    <!-- ── PAGE: PROFILE ── -->
+    <section class="page" id="page-profile">
+      <div class="page-header">
+        <h2 class="page-title"><i class="fas fa-user-cog"></i> Perfil</h2>
+      </div>
+
+      <div class="profile-card">
+        <div class="profile-avatar-wrap">
+          <img src="" alt="Avatar" id="profileAvatar" class="profile-avatar"/>
+          <div class="profile-level" id="profileLevel">1</div>
+        </div>
+        <div class="profile-details">
+          <h2 id="profileUsername">Carregando...</h2>
+          <span class="profile-discord-tag" id="profileDiscordTag">#0000</span>
+          <span class="profile-role-badge" id="profileRoleBadge">Aventureiro</span>
+        </div>
+      </div>
+
+      <div class="profile-edit-card">
+        <h3><i class="fas fa-edit"></i> Editar Perfil</h3>
+        <div class="form-group">
+          <label>Nickname de Exibição</label>
+          <input type="text" id="nicknameInput" placeholder="Seu nickname..." maxlength="32"/>
+          <button class="btn-primary" id="saveNicknameBtn">
+            <i class="fas fa-save"></i> Salvar
+          </button>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ─── MODAL: ENVIAR PRINT ─────────────────────────────────── -->
+  <div class="modal-overlay" id="submitModal" style="display:none">
+    <div class="modal">
+      <div class="modal-header">
+        <h3><i class="fas fa-upload"></i> Enviar Comprovante</h3>
+        <button class="modal-close" id="closeSubmitModal"><i class="fas fa-times"></i></button>
+      </div>
+      <div class="modal-body">
+        <p id="submitQuestTitle" class="modal-quest-name"></p>
+        <div class="upload-area" id="uploadArea">
+          <i class="fas fa-cloud-upload-alt"></i>
+          <p>Clique ou arraste a imagem aqui</p>
+          <span>PNG, JPG, GIF até 5MB</span>
+          <input type="file" id="printInput" accept="image/*" hidden/>
+        </div>
+        <div class="image-preview" id="imagePreview" style="display:none">
+          <img id="previewImg" src="" alt="Preview"/>
+          <button class="btn-remove-img" id="removeImgBtn"><i class="fas fa-trash"></i></button>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-secondary" id="cancelSubmitBtn">Cancelar</button>
+        <button class="btn-primary" id="confirmSubmitBtn">
+          <i class="fas fa-paper-plane"></i> Enviar para Revisão
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─── TOAST ───────────────────────────────────────────────── -->
+  <div class="toast-container" id="toastContainer"></div>
+
+  <script src="js/auth.js"></script>
+  <script src="js/home.js"></script>
+  <script src="js/quests.js"></script>
+  <script src="js/ranking.js"></script>
+</body>
+</html>

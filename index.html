@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>RPG Quests ⚔️ - Login</title>
+  <link rel="stylesheet" href="css/style.css"/>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=MedievalSharp&family=Cinzel:wght@400;600;700&family=Cinzel+Decorative:wght@700&family=Lato:wght@300;400;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
+</head>
+<body class="login-page">
+
+  <!-- Partículas de fundo -->
+  <div class="particles" id="particles"></div>
+
+  <!-- Container principal -->
+  <div class="login-container">
+
+    <!-- Logo / Brasão -->
+    <div class="login-logo">
+      <div class="shield-icon">
+        <i class="fas fa-shield-halved"></i>
+      </div>
+      <h1 class="game-title">RPG <span>Quests</span></h1>
+      <p class="game-subtitle">⚔️ Complete missões. Ganhe recompensas. Conquiste o ranking. ⚔️</p>
+    </div>
+
+    <!-- Card de Login -->
+    <div class="login-card">
+      <div class="card-glow"></div>
+
+      <div class="login-stats-preview">
+        <div class="stat-item">
+          <i class="fas fa-scroll"></i>
+          <span>Quests Épicas</span>
+        </div>
+        <div class="stat-item">
+          <i class="fas fa-trophy"></i>
+          <span>Rankings Globais</span>
+        </div>
+        <div class="stat-item">
+          <i class="fas fa-coins"></i>
+          <span>Recompensas</span>
+        </div>
+      </div>
+
+      <div class="login-divider">
+        <span>Entre na sua guilda</span>
+      </div>
+
+      <a href="/auth/discord" class="btn-discord" id="discordLoginBtn">
+        <svg width="24" height="24" viewBox="0 0 127.14 96.36" fill="currentColor">
+          <path d="M107.7,8.07A105.15,105.15,0,0,0,81.47,0a72.06,72.06,0,0,0-3.36,6.83A97.68,97.68,0,0,0,49,6.83,72.37,72.37,0,0,0,45.64,0,105.89,105.89,0,0,0,19.39,8.09C2.79,32.65-1.71,56.6.54,80.21h0A105.73,105.73,0,0,0,32.71,96.36,77.7,77.7,0,0,0,39.6,85.25a68.42,68.42,0,0,1-10.85-5.18c.91-.66,1.8-1.34,2.66-2a75.57,75.57,0,0,0,64.32,0c.87.71,1.76,1.39,2.66,2a68.68,68.68,0,0,1-10.87,5.19,77,77,0,0,0,6.89,11.1A105.25,105.25,0,0,0,126.6,80.22h0C129.24,52.84,122.09,29.11,107.7,8.07ZM42.45,65.69C36.18,65.69,31,60,31,53s5-12.74,11.43-12.74S54,46,53.89,53,48.84,65.69,42.45,65.69Zm42.24,0C78.41,65.69,73.25,60,73.25,53s5-12.74,11.44-12.74S96.23,46,96.12,53,91.08,65.69,84.69,65.69Z"/>
+        </svg>
+        <span>Entrar com Discord</span>
+        <i class="fas fa-arrow-right"></i>
+      </a>
+
+      <p class="login-disclaimer">
+        <i class="fas fa-lock"></i>
+        Login seguro via OAuth2 do Discord. Nunca pedimos sua senha.
+      </p>
+    </div>
+
+    <!-- Features -->
+    <div class="login-features">
+      <div class="feature-card">
+        <i class="fas fa-dragon"></i>
+        <h3>Quests Diárias</h3>
+        <p>Complete missões e ganhe moedas todos os dias</p>
+      </div>
+      <div class="feature-card">
+        <i class="fas fa-chart-line"></i>
+        <h3>Ranking em Tempo Real</h3>
+        <p>Diário, semanal e mensal com reset automático</p>
+      </div>
+      <div class="feature-card">
+        <i class="fas fa-medal"></i>
+        <h3>Sistema de XP</h3>
+        <p>Suba de nível e desbloqueie quests exclusivas</p>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Error message -->
+  <div class="error-toast" id="errorToast" style="display:none">
+    <i class="fas fa-exclamation-triangle"></i>
+    <span id="errorMsg"></span>
+  </div>
+
+  <script>
+    // Verificar se há erro na URL
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('error') === 'auth_failed') {
+      const toast = document.getElementById('errorToast');
+      document.getElementById('errorMsg').textContent = 'Falha ao autenticar com Discord. Tente novamente.';
+      toast.style.display = 'flex';
+      setTimeout(() => toast.style.display = 'none', 5000);
+    }
+
+    // Verificar se já está logado
+    fetch('/auth/me', { credentials: 'include' })
+      .then(r => { if (r.ok) window.location.href = '/home.html'; })
+      .catch(() => {});
+
+    // Gerar partículas
+    const container = document.getElementById('particles');
+    for (let i = 0; i < 40; i++) {
+      const p = document.createElement('div');
+      p.className = 'particle';
+      p.style.cssText = `
+        left: ${Math.random() * 100}%;
+        animation-delay: ${Math.random() * 8}s;
+        animation-duration: ${6 + Math.random() * 8}s;
+        width: ${2 + Math.random() * 4}px;
+        height: ${2 + Math.random() * 4}px;
+        opacity: ${0.2 + Math.random() * 0.5};
+      `;
+      container.appendChild(p);
+    }
+  </script>
+</body>
+</html>

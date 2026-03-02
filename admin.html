@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>RPG Quests ⚔️ - Admin</title>
+  <link rel="stylesheet" href="css/style.css"/>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Cinzel+Decorative:wght@700&family=Lato:wght@300;400;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
+</head>
+<body class="dashboard-page admin-page">
+
+  <!-- ─── SIDEBAR ADMIN ────────────────────────────────────────── -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-header">
+      <div class="sidebar-logo">
+        <i class="fas fa-crown"></i>
+        <span>Admin Panel</span>
+      </div>
+      <button class="sidebar-toggle" id="sidebarToggle">
+        <i class="fas fa-chevron-left"></i>
+      </button>
+    </div>
+
+    <div class="sidebar-user">
+      <div class="user-avatar-wrap">
+        <img src="" alt="Avatar" id="sidebarAvatar" class="user-avatar"/>
+        <div class="user-level-badge admin-badge"><i class="fas fa-crown"></i></div>
+      </div>
+      <div class="user-info">
+        <span class="user-name" id="sidebarName">Admin</span>
+        <span class="user-role admin-role">ADMINISTRADOR</span>
+      </div>
+    </div>
+
+    <nav class="sidebar-nav">
+      <a href="#" class="nav-item active" data-page="submissions">
+        <i class="fas fa-inbox"></i>
+        <span>Revisões Pendentes</span>
+        <div class="nav-badge" id="pendingCount"></div>
+      </a>
+      <a href="#" class="nav-item" data-page="quests">
+        <i class="fas fa-scroll"></i>
+        <span>Gerenciar Quests</span>
+      </a>
+      <a href="#" class="nav-item" data-page="users">
+        <i class="fas fa-users"></i>
+        <span>Usuários</span>
+      </a>
+      <a href="#" class="nav-item" data-page="ranking-admin">
+        <i class="fas fa-trophy"></i>
+        <span>Rankings</span>
+      </a>
+      <div class="nav-divider"></div>
+      <a href="/home.html" class="nav-item">
+        <i class="fas fa-home"></i>
+        <span>Voltar ao Dashboard</span>
+      </a>
+      <a href="/auth/logout" class="nav-item nav-logout">
+        <i class="fas fa-right-from-bracket"></i>
+        <span>Sair</span>
+      </a>
+    </nav>
+  </aside>
+
+  <!-- ─── MAIN CONTENT ─────────────────────────────────────────── -->
+  <main class="main-content" id="mainContent">
+
+    <div class="topbar">
+      <button class="topbar-menu" id="mobileMenuBtn">
+        <i class="fas fa-bars"></i>
+      </button>
+      <div class="topbar-title" id="topbarTitle"><i class="fas fa-crown"></i> Painel Administrativo</div>
+    </div>
+
+    <!-- ── PAGE: SUBMISSIONS ── -->
+    <section class="page active" id="page-submissions">
+      <div class="page-header">
+        <h2 class="page-title"><i class="fas fa-inbox"></i> Revisões Pendentes</h2>
+        <span class="pending-count-badge" id="submissionsCount">0 pendentes</span>
+      </div>
+
+      <div class="submissions-list" id="submissionsList">
+        <div class="loading-spinner"><i class="fas fa-spinner fa-spin"></i> Carregando...</div>
+      </div>
+    </section>
+
+    <!-- ── PAGE: QUESTS MANAGEMENT ── -->
+    <section class="page" id="page-quests">
+      <div class="page-header">
+        <h2 class="page-title"><i class="fas fa-scroll"></i> Gerenciar Quests</h2>
+        <button class="btn-primary" id="createQuestBtn">
+          <i class="fas fa-plus"></i> Nova Quest
+        </button>
+      </div>
+
+      <div class="admin-quests-list" id="adminQuestsList">
+        <div class="loading-spinner"><i class="fas fa-spinner fa-spin"></i> Carregando...</div>
+      </div>
+    </section>
+
+    <!-- ── PAGE: USERS ── -->
+    <section class="page" id="page-users">
+      <div class="page-header">
+        <h2 class="page-title"><i class="fas fa-users"></i> Usuários</h2>
+      </div>
+
+      <div class="search-bar">
+        <i class="fas fa-search"></i>
+        <input type="text" id="userSearch" placeholder="Buscar usuário..."/>
+      </div>
+
+      <div class="users-table-wrap">
+        <table class="users-table" id="usersTable">
+          <thead>
+            <tr>
+              <th>Usuário</th>
+              <th>Nível</th>
+              <th>Moedas</th>
+              <th>Role</th>
+              <th>Ações</th>
+            </tr>
+          </thead>
+          <tbody id="usersTableBody">
+            <tr><td colspan="5" class="loading-spinner"><i class="fas fa-spinner fa-spin"></i></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ── PAGE: RANKING ADMIN ── -->
+    <section class="page" id="page-ranking-admin">
+      <div class="page-header">
+        <h2 class="page-title"><i class="fas fa-trophy"></i> Gestão de Rankings</h2>
+      </div>
+
+      <div class="ranking-reset-cards">
+        <div class="reset-card">
+          <i class="fas fa-sun"></i>
+          <h3>Ranking Diário</h3>
+          <p>Reseta às 00:00 automaticamente</p>
+          <button class="btn-danger" data-period="daily" id="resetDaily">
+            <i class="fas fa-rotate"></i> Resetar Agora
+          </button>
+        </div>
+        <div class="reset-card">
+          <i class="fas fa-calendar-week"></i>
+          <h3>Ranking Semanal</h3>
+          <p>Reseta todo domingo automaticamente</p>
+          <button class="btn-danger" data-period="weekly" id="resetWeekly">
+            <i class="fas fa-rotate"></i> Resetar Agora
+          </button>
+        </div>
+        <div class="reset-card">
+          <i class="fas fa-calendar"></i>
+          <h3>Ranking Mensal</h3>
+          <p>Reseta todo dia 1 automaticamente</p>
+          <button class="btn-danger" data-period="monthly" id="resetMonthly">
+            <i class="fas fa-rotate"></i> Resetar Agora
+          </button>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ─── MODAL: CRIAR/EDITAR QUEST ───────────────────────────── -->
+  <div class="modal-overlay" id="questModal" style="display:none">
+    <div class="modal modal-large">
+      <div class="modal-header">
+        <h3 id="questModalTitle"><i class="fas fa-plus"></i> Nova Quest</h3>
+        <button class="modal-close" id="closeQuestModal"><i class="fas fa-times"></i></button>
+      </div>
+      <div class="modal-body">
+        <form id="questForm">
+          <input type="hidden" id="questId"/>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Título *</label>
+              <input type="text" id="questTitle" placeholder="Ex: Postar no Twitter" required/>
+            </div>
+            <div class="form-group">
+              <label>Tipo *</label>
+              <select id="questType" required>
+                <option value="daily">☀️ Diária</option>
+                <option value="weekly">📅 Semanal</option>
+                <option value="monthly">🗓️ Mensal</option>
+                <option value="event">⭐ Evento</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-group">
+            <label>Descrição *</label>
+            <textarea id="questDescription" placeholder="Descreva o que precisa ser feito..." rows="3" required></textarea>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Recompensa (Moedas) *</label>
+              <input type="number" id="questRewardCoins" min="1" placeholder="50" required/>
+            </div>
+            <div class="form-group">
+              <label>Recompensa (XP)</label>
+              <input type="number" id="questRewardXP" min="0" placeholder="10"/>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Máx. Usuários <small>(deixe vazio para ilimitado)</small></label>
+              <input type="number" id="questMaxUsers" min="1" placeholder="Ilimitado"/>
+            </div>
+            <div class="form-group">
+              <label>Nível Mínimo</label>
+              <input type="number" id="questMinLevel" min="1" value="1"/>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Expira em <small>(opcional)</small></label>
+              <input type="datetime-local" id="questExpiresAt"/>
+            </div>
+            <div class="form-group">
+              <label>Nome do Evento <small>(para tipo evento)</small></label>
+              <input type="text" id="questEventName" placeholder="Ex: Evento de Natal"/>
+            </div>
+          </div>
+          <div class="form-group checkbox-group">
+            <label>
+              <input type="checkbox" id="questImageRequired" checked/>
+              Exigir envio de print/comprovante
+            </label>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-secondary" id="cancelQuestModal">Cancelar</button>
+        <button class="btn-primary" id="saveQuestBtn">
+          <i class="fas fa-save"></i> Salvar Quest
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─── MODAL: VER PRINT ────────────────────────────────────── -->
+  <div class="modal-overlay" id="printModal" style="display:none">
+    <div class="modal">
+      <div class="modal-header">
+        <h3><i class="fas fa-image"></i> Comprovante</h3>
+        <button class="modal-close" id="closePrintModal"><i class="fas fa-times"></i></button>
+      </div>
+      <div class="modal-body text-center">
+        <img id="printModalImg" src="" alt="Print" style="max-width:100%; border-radius: 8px;"/>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─── TOAST ───────────────────────────────────────────────── -->
+  <div class="toast-container" id="toastContainer"></div>
+
+  <script src="js/auth.js"></script>
+  <script src="js/admin.js"></script>
+</body>
+</html>
