@@ -1,113 +1,173 @@
-const Quest = require('../models/Quest');
-const UserQuest = require('../models/UserQuest');
-const upload = require('../middleware/upload');
-const path = require('path');
+const admin = require('firebase-admin');
 
-// ─── Listar todas as quests disponíveis ──────────────────────────
+// ─── Listar todas as quests ──────────────────────────────────────
 exports.getAllQuests = async (req, res) => {
   try {
-    const { type, status } = req.query;
-    const filter = {};
-    if (type && type !== 'all') filter.type = type;
+    const db   = admin.database();
+    const uid  = req.uid;
 
-    const quests = await Quest.find(filter).sort({ createdAt: -1 });
+    const [questsSnap, myQuestsSnap] = await Promise.all([
+      db.ref('rpg-quests/quests').once('value'),
+      db.ref(`rpg-quests/userQuests/${uid}`).once('value')
+    ]);
 
-    // Para cada quest, verifica se o usuário já a pegou
-    const userQuests = await UserQuest.find({ userId: req.user._id });
-    const userQuestMap = {};
-    userQuests.forEach(uq => {
-      userQuestMap[uq.questId.toString()] = uq.status;
-    });
+    const quests    = questsSnap.val()    || {};
+    const myQuests  = myQuestsSnap.val()  || {};
 
-    const questsWithStatus = quests.map(q => ({
-      ...q.toJSON(),
-      userStatus: userQuestMap[q._id.toString()] || null
-    }));
+    const { type } = req.query;
 
-    res.json(questsWithStatus);
+    const result = Object.values(quests)
+      .filter(q => q.isActive !== false)
+      .filter(q => !type || type === 'all' || q.type === type)
+      .filter(q => !q.expiresAt || new Date(q.expiresAt) > new Date())
+      .map(q => ({
+        ...q,
+        isAvailable: !q.maxUsers || (q.currentUsers || 0) < q.maxUsers,
+        userStatus:  myQuests[q.id]?.status || null
+      }))
+      .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+    res.json(result);
   } catch (err) {
-    console.error('getAllQuests error:', err);
-    res.status(500).json({ error: 'Internal server error' });
+    res.status(500).json({ error: err.message });
   }
 };
 
-// ─── Quests do usuário ───────────────────────────────────────────
+// ─── Minhas quests ───────────────────────────────────────────────
 exports.getMyQuests = async (req, res) => {
   try {
+    const db  = admin.database();
+    const uid = req.uid;
     const { status } = req.query;
-    const filter = { userId: req.user._id };
-    if (status && status !== 'all') filter.status = status;
 
-    const myQuests = await UserQuest.find(filter)
-      .populate('questId')
-      .sort({ takenAt: -1 });
+    const snap = await db.ref(`rpg-quests/userQuests/${uid}`).once('value');
+    const data = snap.val() || {};
 
-    res.json(myQuests);
+    let result = Object.values(data);
+    if (status && status !== 'all') {
+      result = result.filter(q => q.status === status);
+    }
+
+    result.sort((a, b) => new Date(b.takenAt) - new Date(a.takenAt));
+    res.json(result);
   } catch (err) {
-    console.error('getMyQuests error:', err);
-    res.status(500).json({ error: 'Internal server error' });
+    res.status(500).json({ error: err.message });
   }
 };
 
 // ─── Pegar quest ─────────────────────────────────────────────────
 exports.takeQuest = async (req, res) => {
   try {
-    const quest = await Quest.findById(req.params.id);
-    if (!quest) return res.status(404).json({ error: 'Quest not found' });
-    if (!quest.isAvailable) return res.status(400).json({ error: 'Quest not available' });
+    const db      = admin.database();
+    const uid     = req.uid;
+    const questId = req.params.id;
 
-    // Verifica nível mínimo
-    if (req.user.level < quest.minLevel) {
-      return res.status(400).json({ error: `Level ${quest.minLevel} required` });
-    }
+    const [questSnap, userSnap, alreadySnap] = await Promise.all([
+      db.ref(`rpg-quests/quests/${questId}`).once('value'),
+      db.ref(`rpg-quests/users/${uid}`).once('value'),
+      db.ref(`rpg-quests/userQuests/${uid}/${questId}`).once('value')
+    ]);
 
-    // Verifica se já pegou
-    const existing = await UserQuest.findOne({ userId: req.user._id, questId: quest._id });
-    if (existing) return res.status(400).json({ error: 'Quest already taken' });
+    if (!questSnap.exists()) return res.status(404).json({ error: 'Quest não encontrada' });
+    const quest = questSnap.val();
+    const user  = userSnap.val() || {};
 
-    const userQuest = await UserQuest.create({
-      userId: req.user._id,
-      questId: quest._id
-    });
+    if (!quest.isActive)  return res.status(400).json({ error: 'Quest inativa' });
+    if (quest.expiresAt && new Date(quest.expiresAt) < new Date())
+      return res.status(400).json({ error: 'Quest expirada' });
+    if (quest.maxUsers && (quest.currentUsers || 0) >= quest.maxUsers)
+      return res.status(400).json({ error: 'Quest esgotada' });
+    if (alreadySnap.exists())
+      return res.status(400).json({ error: 'Você já pegou esta quest' });
+    if ((user.level || 1) < (quest.minLevel || 1))
+      return res.status(400).json({ error: `Nível ${quest.minLevel} necessário` });
 
-    // Incrementa contador de usuários
-    quest.currentUsers += 1;
-    await quest.save();
+    const userQuest = {
+      userQuestId: `${uid}_${questId}`,
+      userId:      uid,
+      questId:     questId,
+      questTitle:  quest.title,
+      questType:   quest.type,
+      rewardCoins: quest.rewardCoins,
+      rewardXP:    quest.rewardXP || 0,
+      status:      'active',
+      printUrl:    null,
+      printPath:   null,
+      reviewedBy:  null,
+      reviewNote:  null,
+      takenAt:     new Date().toISOString(),
+      completedAt: null,
+      reviewedAt:  null
+    };
 
-    res.status(201).json({ message: 'Quest taken successfully!', userQuest });
+    await Promise.all([
+      db.ref(`rpg-quests/userQuests/${uid}/${questId}`).set(userQuest),
+      db.ref(`rpg-quests/quests/${questId}/currentUsers`).transaction(v => (v || 0) + 1)
+    ]);
+
+    res.status(201).json({ message: 'Quest aceita! Boa sorte! ⚔️', userQuest });
   } catch (err) {
-    console.error('takeQuest error:', err);
-    res.status(500).json({ error: 'Internal server error' });
+    res.status(500).json({ error: err.message });
   }
 };
 
-// ─── Enviar print da quest ────────────────────────────────────────
+// ─── Enviar print ────────────────────────────────────────────────
 exports.submitQuest = async (req, res) => {
-  upload.single('print')(req, res, async (err) => {
-    if (err) return res.status(400).json({ error: err.message });
+  try {
+    const db      = admin.database();
+    const uid     = req.uid;
+    const questId = req.params.id;
+    const { printUrl, printPath } = req.body;
 
-    try {
-      const userQuest = await UserQuest.findOne({
-        _id: req.params.id,
-        userId: req.user._id
-      });
+    if (!printUrl) return res.status(400).json({ error: 'URL da imagem é obrigatória' });
 
-      if (!userQuest) return res.status(404).json({ error: 'Quest not found' });
-      if (userQuest.status !== 'active') {
-        return res.status(400).json({ error: 'Quest is not active' });
-      }
+    const userQuestRef  = db.ref(`rpg-quests/userQuests/${uid}/${questId}`);
+    const userQuestSnap = await userQuestRef.once('value');
 
-      if (!req.file) return res.status(400).json({ error: 'Image is required' });
+    if (!userQuestSnap.exists())
+      return res.status(404).json({ error: 'Quest não encontrada' });
+    if (userQuestSnap.val().status !== 'active')
+      return res.status(400).json({ error: 'Quest não está ativa' });
 
-      const printUrl = `/uploads/${req.file.filename}`;
-      userQuest.printUrl = printUrl;
-      userQuest.status = 'pending_review';
-      await userQuest.save();
+    // Buscar dados do usuário para a submission
+    const [userSnap, questSnap] = await Promise.all([
+      db.ref(`rpg-quests/users/${uid}`).once('value'),
+      db.ref(`rpg-quests/quests/${questId}`).once('value')
+    ]);
+    const user  = userSnap.val()  || {};
+    const quest = questSnap.val() || {};
 
-      res.json({ message: 'Quest submitted for review!', printUrl });
-    } catch (err) {
-      console.error('submitQuest error:', err);
-      res.status(500).json({ error: 'Internal server error' });
-    }
-  });
+    // Atualizar userQuest
+    await userQuestRef.update({
+      status:      'pending_review',
+      printUrl,
+      printPath:   printPath || null
+    });
+
+    // Criar submission global para o admin ver
+    const subId  = `${uid}_${questId}`;
+    const subData = {
+      id:          subId,
+      userId:      uid,
+      questId:     questId,
+      questTitle:  quest.title || userQuestSnap.val().questTitle,
+      username:    user.nickname || user.username || 'Unknown',
+      photoURL:    user.photoURL || '',
+      rewardCoins: quest.rewardCoins || userQuestSnap.val().rewardCoins || 0,
+      rewardXP:    quest.rewardXP   || userQuestSnap.val().rewardXP    || 0,
+      printUrl,
+      printPath:   printPath || null,
+      status:      'pending_review',
+      submittedAt: new Date().toISOString(),
+      reviewedBy:  null,
+      reviewNote:  null,
+      reviewedAt:  null
+    };
+
+    await db.ref(`rpg-quests/submissions/${subId}`).set(subData);
+
+    res.json({ message: 'Enviado para revisão! Aguarde aprovação do admin. ⏳' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 };

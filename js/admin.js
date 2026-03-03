@@ -8,7 +8,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   if (!user) return;
 
   // Preencher avatar do admin
-  document.getElementById('sidebarAvatar').src = user.avatar || 'https://cdn.discordapp.com/embed/avatars/0.png';
+  document.getElementById('sidebarAvatar').src = user.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.username||'A')}&background=f0c040&color=000`;
   document.getElementById('sidebarName').textContent = user.nickname || user.username;
 
   // Carregar página inicial
@@ -77,7 +77,7 @@ function renderSubmission(s) {
   const quest = s.questId;
   if (!user || !quest) return '';
 
-  const avatar = user.avatar || 'https://cdn.discordapp.com/embed/avatars/0.png';
+  const avatar = s.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(s.username||'U')}&background=f0c040&color=000`;
 
   return `
     <div class="submission-item" id="sub-${s._id}">
@@ -401,21 +401,21 @@ async function loadUsers() {
     if (!res) return;
     const users = await res.json();
 
-    tbody.innerHTML = users.map(u => `
+    tbody.innerHTML = users.map(u => {
+      const userPhoto = u.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(u.username||'U')}&background=f0c040&color=000&size=32`;
+      return `
       <tr>
         <td>
           <div class="table-user-cell">
-            <img src="${u.avatar || 'https://cdn.discordapp.com/embed/avatars/0.png'}"
-                 alt="" class="table-avatar"
-                 onerror="this.src='https://cdn.discordapp.com/embed/avatars/0.png'"/>
+            <img src="${userPhoto}" alt="" class="table-avatar" onerror="this.src='https://ui-avatars.com/api/?background=f0c040&color=000'"/>
             <div>
               <div style="font-family:var(--font-title);font-size:0.85rem">${escapeHtml(u.nickname || u.username)}</div>
               <div style="font-size:0.7rem;color:var(--text-muted)">@${escapeHtml(u.username)}</div>
             </div>
           </div>
         </td>
-        <td style="font-family:var(--font-title);color:var(--gold)">${u.level}</td>
-        <td style="color:var(--gold)"><i class="fas fa-coins" style="font-size:0.8rem"></i> ${u.coins.toLocaleString('pt-BR')}</td>
+        <td style="font-family:var(--font-title);color:var(--gold)">${u.level || 1}</td>
+        <td style="color:var(--gold)"><i class="fas fa-coins" style="font-size:0.8rem"></i> ${(u.coins||0).toLocaleString('pt-BR')}</td>
         <td>
           <span style="padding:2px 10px;border-radius:10px;font-size:0.7rem;font-weight:700;
                 background:${u.role === 'admin' ? 'rgba(168,85,247,0.2)' : 'rgba(240,192,64,0.1)'};
@@ -424,12 +424,13 @@ async function loadUsers() {
           </span>
         </td>
         <td>
-          <button class="btn-edit-quest" onclick="toggleUserRole('${u._id}','${u.role}')" style="font-size:0.75rem;padding:5px 10px;">
+          <button class="btn-edit-quest" onclick="toggleUserRole('${u.uid}','${u.role}')" style="font-size:0.75rem;padding:5px 10px;">
             <i class="fas fa-user-shield"></i>
             ${u.role === 'admin' ? 'Remover Admin' : 'Tornar Admin'}
           </button>
         </td>
-      </tr>`).join('');
+      </tr>`;
+    }).join('');
 
     // Search
     document.getElementById('userSearch')?.addEventListener('input', function () {
@@ -443,12 +444,12 @@ async function loadUsers() {
   }
 }
 
-async function toggleUserRole(id, currentRole) {
+async function toggleUserRole(uid, currentRole) {
   const newRole = currentRole === 'admin' ? 'user' : 'admin';
   if (!confirm(`${newRole === 'admin' ? 'Tornar este usuário ADMIN?' : 'Remover cargo de admin deste usuário?'}`)) return;
 
   try {
-    const res = await RPG.api(`/api/admin/users/${id}/role`, {
+    const res = await RPG.api(`/api/admin/users/${uid}/role`, {
       method: 'PUT',
       body: JSON.stringify({ role: newRole })
     });

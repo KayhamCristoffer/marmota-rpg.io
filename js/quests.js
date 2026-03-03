@@ -3,7 +3,7 @@
    ================================================================ */
 
 let currentFilter = 'all';
-let selectedUserQuestId = null;
+let selectedUserQuestId = null;  // stores questId for the submit
 
 // ─── Carregar quests disponíveis ─────────────────────────────────
 async function loadQuests(filter = 'all') {
@@ -182,8 +182,10 @@ async function loadMyQuests(filter = 'all') {
 
 // ─── Render item de minha quest ──────────────────────────────────
 function renderMyQuestItem(uq) {
-  const quest = uq.questId;
-  if (!quest) return '';
+  // Firebase: uq is flat — questTitle, rewardCoins, questType are top-level fields
+  const title       = uq.questTitle  || 'Quest';
+  const rewardCoins = uq.rewardCoins || 0;
+  const questType   = uq.questType   || 'daily';
 
   const statusLabels = {
     active:         { label: 'Ativa',       css: 'status-active' },
@@ -192,19 +194,13 @@ function renderMyQuestItem(uq) {
     rejected:       { label: 'Rejeitada',   css: 'status-rejected' },
     failed:         { label: 'Falhou',      css: 'status-failed' }
   };
-
   const statusInfo = statusLabels[uq.status] || { label: uq.status, css: '' };
-
-  const typeColors = {
-    daily: 'var(--orange)', weekly: 'var(--blue)',
-    monthly: 'var(--purple-light)', event: 'var(--gold)'
-  };
-
-  const iconColors = typeColors[quest.type] || 'var(--gold)';
+  const typeColors = { daily: 'var(--orange)', weekly: 'var(--blue)', monthly: 'var(--purple-light)', event: 'var(--gold)' };
+  const iconColor   = typeColors[questType] || 'var(--gold)';
 
   let actionBtn = '';
   if (uq.status === 'active') {
-    actionBtn = `<button class="btn-submit-quest" data-id="${uq._id}" data-title="${escapeHtml(quest.title)}">
+    actionBtn = `<button class="btn-submit-quest" data-id="${uq.questId}" data-title="${escapeHtml(title)}">
       <i class="fas fa-upload"></i> Enviar Print
     </button>`;
   } else if (uq.status === 'pending_review') {
@@ -213,22 +209,26 @@ function renderMyQuestItem(uq) {
     </button>`;
   } else if (uq.status === 'completed') {
     actionBtn = `<button class="btn-submit-quest" style="background:rgba(34,197,94,0.15);color:var(--green)" disabled>
-      <i class="fas fa-check"></i> +${quest.rewardCoins} moedas
+      <i class="fas fa-check"></i> +${rewardCoins} moedas
+    </button>`;
+  } else if (uq.status === 'rejected') {
+    actionBtn = `<button class="btn-submit-quest" style="background:rgba(239,68,68,0.15);color:var(--red)" disabled>
+      <i class="fas fa-times"></i> Rejeitada
     </button>`;
   }
 
   return `
     <div class="my-quest-item">
-      <div class="my-quest-icon" style="background:rgba(255,255,255,0.05);color:${iconColors}">
+      <div class="my-quest-icon" style="background:rgba(255,255,255,0.05);color:${iconColor}">
         <i class="fas fa-scroll"></i>
       </div>
       <div class="my-quest-info">
-        <div class="my-quest-title">${escapeHtml(quest.title)}</div>
+        <div class="my-quest-title">${escapeHtml(title)}</div>
         <div class="my-quest-meta">
           <span class="status-badge ${statusInfo.css}">${statusInfo.label}</span>
-          <span><i class="fas fa-coins"></i> ${quest.rewardCoins} moedas</span>
+          <span><i class="fas fa-coins"></i> ${rewardCoins} moedas</span>
           <span style="font-size:0.7rem;color:var(--text-muted)">
-            ${new Date(uq.takenAt).toLocaleDateString('pt-BR')}
+            ${uq.takenAt ? new Date(uq.takenAt).toLocaleDateString('pt-BR') : ''}
           </span>
           ${uq.reviewNote ? `<span style="color:var(--red);font-size:0.75rem">❌ ${escapeHtml(uq.reviewNote)}</span>` : ''}
         </div>
@@ -322,7 +322,7 @@ document.addEventListener('DOMContentLoaded', () => {
     reader.readAsDataURL(file);
   }
 
-  // Confirmar envio
+  // Confirmar envio — 2 etapas: 1) upload GitHub, 2) submit quest
   confirmSubmitBtn?.addEventListener('click', async () => {
     if (!selectedUserQuestId) return;
     if (!printInput.files[0]) {
@@ -331,26 +331,38 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     confirmSubmitBtn.disabled = true;
-    confirmSubmitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Enviando...';
-
-    const formData = new FormData();
-    formData.append('print', printInput.files[0]);
+    confirmSubmitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Enviando imagem...';
 
     try {
-      const res = await fetch(`/api/quests/${selectedUserQuestId}/submit`, {
+      // Etapa 1: Upload da imagem para o GitHub via backend
+      const formData = new FormData();
+      formData.append('print',   printInput.files[0]);
+      formData.append('questId', selectedUserQuestId);
+
+      const uploadRes = await RPG.uploadImage('/api/upload/quest', formData);
+      if (!uploadRes || !uploadRes.ok) {
+        const err = await uploadRes?.json();
+        showToast(err?.error || 'Erro ao fazer upload da imagem', 'error');
+        return;
+      }
+      const { url: printUrl, path: printPath } = await uploadRes.json();
+
+      confirmSubmitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Enviando para revisão...';
+
+      // Etapa 2: Notificar o backend da submissão
+      const res = await RPG.api(`/api/quests/${selectedUserQuestId}/submit`, {
         method: 'POST',
-        credentials: 'include',
-        body: formData
+        body: JSON.stringify({ printUrl, printPath })
       });
 
-      if (res.ok) {
-        showToast('✅ Comprovante enviado! Aguardando revisão do admin.', 'success');
+      if (res && res.ok) {
+        showToast('✅ Comprovante enviado! Aguardando revisão do admin. ⏳', 'success');
         closeModal();
         await loadMyQuests();
-        await loadStats();
+        if (typeof loadStats === 'function') await loadStats();
       } else {
-        const err = await res.json();
-        showToast(err.error || 'Erro ao enviar comprovante', 'error');
+        const err = await res?.json();
+        showToast(err?.error || 'Erro ao enviar para revisão', 'error');
       }
     } catch (err) {
       showToast('Erro de conexão', 'error');

@@ -43,15 +43,15 @@ async function loadRanking(period = 'total') {
     const rest = ranking.slice(3);
     const posIcons = { 1: '🥇', 2: '🥈', 3: '🥉' };
 
-    const listHtml = ranking.map(r => `
+    const listHtml = ranking.map(r => {
+      const photo = r.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(r.nickname||'U')}&background=f0c040&color=000&size=38`;
+      return `
       <div class="ranking-item ${r.isCurrentUser ? 'is-me' : ''}">
         <span class="rank-position rank-pos-${r.position}">
           ${r.position <= 3 ? posIcons[r.position] : `#${r.position}`}
         </span>
-        <img src="${r.avatar || 'https://cdn.discordapp.com/embed/avatars/0.png'}"
-             alt="${escapeHtml(r.nickname)}"
-             class="ranking-avatar"
-             onerror="this.src='https://cdn.discordapp.com/embed/avatars/0.png'"/>
+        <img src="${photo}" alt="${escapeHtml(r.nickname)}" class="ranking-avatar"
+             onerror="this.src='https://ui-avatars.com/api/?background=f0c040&color=000'"/>
         <span class="ranking-name">
           ${escapeHtml(r.nickname)}
           ${r.isCurrentUser ? '<span style="color:var(--gold);font-size:0.7rem;margin-left:4px">(você)</span>' : ''}
@@ -63,7 +63,7 @@ async function loadRanking(period = 'total') {
           <i class="fas fa-coins" style="font-size:0.8rem"></i>
           ${r.coins.toLocaleString('pt-BR')}
         </span>
-      </div>`
+      </div>`;}
     ).join('');
 
     list.innerHTML = listHtml;
@@ -83,7 +83,7 @@ async function loadRanking(period = 'total') {
 
 // ─── Render pódio ────────────────────────────────────────────────
 function renderPodiumItem(user, position) {
-  const avatar = user.avatar || 'https://cdn.discordapp.com/embed/avatars/0.png';
+  const avatar = user.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.nickname||'U')}&background=f0c040&color=000&size=56`;
   const labels = { 1: '🥇', 2: '🥈', 3: '🥉' };
 
   return `
