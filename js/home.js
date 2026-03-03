@@ -39,7 +39,7 @@ async function loadStats() {
     const data = await res.json();
 
     // Atualizar sidebar
-    const avatar = data.avatar || `https://cdn.discordapp.com/embed/avatars/0.png`;
+    const avatar = data.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(data.username)}&background=f0c040&color=000&bold=true`;
     document.getElementById('sidebarAvatar').src = avatar;
     document.getElementById('sidebarName').textContent = data.nickname || data.username;
     document.getElementById('sidebarLevel').textContent = data.level;
@@ -108,7 +108,7 @@ async function loadStats() {
 function setupProfile(user) {
   if (!user) return;
 
-  const avatar = user.avatar || `https://cdn.discordapp.com/embed/avatars/0.png`;
+  const avatar = user.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.username || 'U')}&background=f0c040&color=000&bold=true`;
   const profileAvatar = document.getElementById('profileAvatar');
   const profileUsername = document.getElementById('profileUsername');
   const profileDiscordTag = document.getElementById('profileDiscordTag');

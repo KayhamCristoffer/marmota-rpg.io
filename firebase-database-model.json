@@ -1,0 +1,158 @@
+{
+  "rpg-quests": {
+
+    "users": {
+      "F69XMBOumJSiuBvQm3c63HyJAjy2": {
+        "uid":          "F69XMBOumJSiuBvQm3c63HyJAjy2",
+        "email":        "kayhamoliveira98@gmail.com",
+        "username":     "Kayham",
+        "nickname":     "Kayham",
+        "photoURL":     "https://example.com/photo.jpg",
+        "provider":     "google",
+        "coins":        0,
+        "coinsDaily":   0,
+        "coinsWeekly":  0,
+        "coinsMonthly": 0,
+        "xp":           0,
+        "level":        1,
+        "role":         "admin",
+        "badges":       [],
+        "createdAt":    "2026-03-02T00:00:00.000Z"
+      },
+      "$uid": {
+        "uid":          "$uid",
+        "email":        "user@example.com",
+        "username":     "Username",
+        "nickname":     "Nickname",
+        "photoURL":     "https://example.com/photo.jpg",
+        "provider":     "google",
+        "coins":        0,
+        "coinsDaily":   0,
+        "coinsWeekly":  0,
+        "coinsMonthly": 0,
+        "xp":           0,
+        "level":        1,
+        "role":         "user",
+        "badges":       [],
+        "createdAt":    "2026-01-01T00:00:00.000Z"
+      }
+    },
+
+    "quests": {
+      "quest_001": {
+        "id":            "quest_001",
+        "title":         "Postar no Twitter/X",
+        "description":   "Faça um post sobre a comunidade e envie o print como comprovante.",
+        "type":          "daily",
+        "rewardCoins":   50,
+        "rewardXP":      20,
+        "maxUsers":      null,
+        "currentUsers":  0,
+        "minLevel":      1,
+        "imageRequired": true,
+        "isActive":      true,
+        "eventName":     null,
+        "createdBy":     "F69XMBOumJSiuBvQm3c63HyJAjy2",
+        "expiresAt":     null,
+        "createdAt":     "2026-03-02T00:00:00.000Z"
+      },
+      "quest_002": {
+        "id":            "quest_002",
+        "title":         "Convidar 3 amigos",
+        "description":   "Convide 3 amigos para o servidor e comprove com print do convite aceito.",
+        "type":          "weekly",
+        "rewardCoins":   200,
+        "rewardXP":      80,
+        "maxUsers":      50,
+        "currentUsers":  0,
+        "minLevel":      2,
+        "imageRequired": true,
+        "isActive":      true,
+        "eventName":     null,
+        "createdBy":     "F69XMBOumJSiuBvQm3c63HyJAjy2",
+        "expiresAt":     null,
+        "createdAt":     "2026-03-02T00:00:00.000Z"
+      }
+    },
+
+    "userQuests": {
+      "$uid": {
+        "quest_001": {
+          "userQuestId":  "$uid_quest_001",
+          "userId":       "$uid",
+          "questId":      "quest_001",
+          "questTitle":   "Postar no Twitter/X",
+          "questType":    "daily",
+          "rewardCoins":  50,
+          "rewardXP":     20,
+          "status":       "active",
+          "printUrl":     null,
+          "printPath":    null,
+          "reviewedBy":   null,
+          "reviewNote":   null,
+          "takenAt":      "2026-03-02T00:00:00.000Z",
+          "completedAt":  null,
+          "reviewedAt":   null
+        }
+      }
+    },
+
+    "submissions": {
+      "sub_001": {
+        "id":          "sub_001",
+        "userId":      "$uid",
+        "questId":     "quest_001",
+        "questTitle":  "Postar no Twitter/X",
+        "username":    "Username",
+        "photoURL":    "https://example.com/photo.jpg",
+        "rewardCoins": 50,
+        "rewardXP":    20,
+        "printUrl":    "https://raw.githubusercontent.com/KayhamCristoffer/rpg-marmota/main/users/$uid/quest_001.png",
+        "printPath":   "users/$uid/quest_001.png",
+        "status":      "pending_review",
+        "submittedAt": "2026-03-02T01:00:00.000Z",
+        "reviewedBy":  null,
+        "reviewNote":  null,
+        "reviewedAt":  null
+      }
+    },
+
+    "ranking": {
+      "total": {
+        "$uid": {
+          "uid":      "$uid",
+          "username": "Username",
+          "nickname": "Nickname",
+          "photoURL": "https://example.com/photo.jpg",
+          "coins":    500,
+          "level":    3
+        }
+      },
+      "daily": {
+        "$uid": {
+          "uid":    "$uid",
+          "coins":  50
+        }
+      },
+      "weekly": {
+        "$uid": {
+          "uid":    "$uid",
+          "coins":  200
+        }
+      },
+      "monthly": {
+        "$uid": {
+          "uid":    "$uid",
+          "coins":  500
+        }
+      }
+    },
+
+    "meta": {
+      "lastResetDaily":   "2026-03-02T00:00:00.000Z",
+      "lastResetWeekly":  "2026-03-02T00:00:00.000Z",
+      "lastResetMonthly": "2026-03-01T00:00:00.000Z"
+    }
+
+  }
+}

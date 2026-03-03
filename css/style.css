@@ -219,51 +219,75 @@ input, select, textarea { font-family: inherit; }
   background: var(--border);
 }
 
-.btn-discord {
+/* ─── Google / GitHub login buttons ─────────────────────────── */
+.btn-google,
+.btn-github {
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 12px;
   width: 100%;
-  padding: 16px 24px;
-  background: #5865f2;
-  color: white;
+  padding: 14px 24px;
   border-radius: var(--radius-md);
   font-family: var(--font-title);
-  font-size: 1rem;
-  letter-spacing: 1px;
+  font-size: 0.95rem;
+  letter-spacing: 0.5px;
   font-weight: 600;
   transition: var(--transition);
   position: relative;
   overflow: hidden;
+  cursor: pointer;
+  margin-bottom: 12px;
+  border: none;
 }
 
-.btn-discord::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(135deg, rgba(255,255,255,0.1), transparent);
-  opacity: 0;
-  transition: var(--transition);
+.btn-google {
+  background: #ffffff;
+  color: #3c4043;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.3);
 }
 
-.btn-discord:hover {
+.btn-google:hover {
   transform: translateY(-2px);
-  box-shadow: 0 8px 30px rgba(88, 101, 242, 0.5);
+  box-shadow: 0 8px 24px rgba(255,255,255,0.25);
 }
 
-.btn-discord:hover::before { opacity: 1; }
+.btn-github {
+  background: #24292e;
+  color: white;
+  border: 1px solid rgba(255,255,255,0.1);
+}
 
-.btn-discord .fa-arrow-right {
+.btn-github:hover {
+  transform: translateY(-2px);
+  background: #1a1f23;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+}
+
+.btn-google .btn-arrow,
+.btn-github .btn-arrow {
   margin-left: auto;
   opacity: 0;
-  transform: translateX(-10px);
+  transform: translateX(-8px);
   transition: var(--transition);
 }
 
-.btn-discord:hover .fa-arrow-right {
+.btn-google:hover .btn-arrow,
+.btn-github:hover .btn-arrow {
   opacity: 1;
   transform: translateX(0);
+}
+
+.login-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 14px;
+  color: var(--gold);
+  font-family: var(--font-title);
+  font-size: 0.95rem;
+  margin-bottom: 12px;
 }
 
 .login-disclaimer {
