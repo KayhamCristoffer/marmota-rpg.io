@@ -115,11 +115,12 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 // ─── Helpers ──────────────────────────────────────────────────── */
-if (typeof escapeHtml === 'undefined') {
-  function escapeHtml(text) {
-    if (!text) return '';
-    const div = document.createElement('div');
-    div.appendChild(document.createTextNode(text));
-    return div.innerHTML;
-  }
+function escapeHtml(text) {
+  if (!text) return '';
+  const div = document.createElement('div');
+  div.appendChild(document.createTextNode(text));
+  return div.innerHTML;
 }
+
+// Expor funções globalmente (chamadas por home.js)
+window.loadRanking = loadRanking;

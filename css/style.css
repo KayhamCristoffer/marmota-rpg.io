@@ -1580,6 +1580,52 @@ input, select, textarea { font-family: inherit; }
 
 .btn-reject:hover { background: rgba(239,68,68,0.25); }
 
+/* ── Botão largura total (login page) ─────────────────────────── */
+.btn-full {
+  width: 100%;
+  justify-content: center;
+  padding: 12px 20px;
+  font-size: 0.95rem;
+  cursor: pointer;
+  border: none;
+}
+
+.btn-primary.btn-full {
+  background: linear-gradient(135deg, var(--gold-dark, #b8922a), var(--gold, #c9a84c));
+  color: var(--bg-primary, #0f0f1a);
+  font-family: var(--font-title, 'Cinzel', serif);
+  font-weight: 700;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: all 0.2s;
+}
+
+.btn-primary.btn-full:hover {
+  filter: brightness(1.1);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(201,168,76,.35);
+}
+
+.btn-secondary.btn-full {
+  background: transparent;
+  color: var(--gold, #c9a84c);
+  border: 1px solid var(--gold, #c9a84c);
+  border-radius: 10px;
+  font-family: var(--font-title, 'Cinzel', serif);
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: all 0.2s;
+}
+
+.btn-secondary.btn-full:hover {
+  background: rgba(201,168,76,.1);
+  transform: translateY(-1px);
+}
+
 /* ─── MODAL ───────────────────────────────────────────────────── */
 .modal-overlay {
   position: fixed;

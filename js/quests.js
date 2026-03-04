@@ -398,3 +398,7 @@ function escapeHtml(text) {
   div.appendChild(document.createTextNode(text));
   return div.innerHTML;
 }
+
+// ─── Expor funções globalmente (chamadas por home.js) ─────────────
+window.loadQuests   = loadQuests;
+window.loadMyQuests = loadMyQuests;
