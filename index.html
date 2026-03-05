@@ -6,16 +6,149 @@
   <title>RPG Quests ⚔️ - Login</title>
   <link rel="stylesheet" href="css/style.css"/>
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Cinzel+Decorative:wght@700&family=Lato:wght@300;400;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=MedievalSharp&family=Cinzel:wght@400;600;700&family=Cinzel+Decorative:wght@700&family=Lato:wght@300;400;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
+  <style>
+    /* ── Overlay de loading inicial ──────────────── */
+    #pageLoader{
+      position:fixed;inset:0;background:var(--bg-primary,#0f0f1a);
+      display:flex;flex-direction:column;align-items:center;justify-content:center;
+      z-index:99999;transition:opacity .4s;
+    }
+    #pageLoader.hide{opacity:0;pointer-events:none;}
+    #pageLoader .loader-shield{font-size:3rem;color:var(--gold,#c9a84c);margin-bottom:1rem;
+      animation:shield-pulse 1.5s ease-in-out infinite;}
+    @keyframes shield-pulse{0%,100%{transform:scale(1);}50%{transform:scale(1.1);}}
+    #pageLoader p{color:var(--text-secondary,#aaa);font-family:'Cinzel',serif;font-size:.85rem;}
+
+    /* ── Modais de autenticação ───────────────────── */
+    .auth-overlay{
+      display:none;position:fixed;inset:0;background:rgba(0,0,0,.8);
+      z-index:9999;align-items:center;justify-content:center;
+      backdrop-filter:blur(6px);
+    }
+    .auth-overlay.open{display:flex;}
+    .auth-box{
+      background:var(--surface,#1a1a2e);
+      border:1px solid var(--gold,#c9a84c);
+      border-radius:16px;padding:2rem 2.2rem;
+      width:min(440px,94vw);position:relative;
+      box-shadow:0 0 60px rgba(201,168,76,.2);
+    }
+    .auth-box h2{
+      font-family:'Cinzel',serif;color:var(--gold,#c9a84c);
+      margin:0 0 .3rem;font-size:1.4rem;text-align:center;
+    }
+    .auth-box .auth-subtitle{
+      text-align:center;color:var(--text-muted,#888);
+      font-size:.8rem;margin-bottom:1.4rem;
+    }
+    .auth-box .form-group{margin-bottom:.9rem;}
+    .auth-box label{
+      display:block;font-size:.75rem;color:var(--text-muted,#aaa);
+      margin-bottom:.3rem;text-transform:uppercase;letter-spacing:.06em;
+    }
+    .auth-box input[type=text],
+    .auth-box input[type=email],
+    .auth-box input[type=password]{
+      width:100%;padding:.7rem 1rem;border-radius:8px;
+      border:1px solid var(--border,#2a2a3e);
+      background:var(--bg-primary,#0f0f1a);
+      color:#fff;font-size:.95rem;box-sizing:border-box;
+      transition:border-color .2s;
+    }
+    .auth-box input:focus{outline:none;border-color:var(--gold,#c9a84c);}
+    .auth-box .btn-auth-primary{
+      width:100%;padding:.85rem;border:none;border-radius:10px;
+      font-family:'Cinzel',serif;font-size:1rem;font-weight:700;
+      cursor:pointer;margin-top:.4rem;transition:all .2s;
+      background:linear-gradient(135deg,#b8922a,#c9a84c);color:#0f0f1a;
+      display:flex;align-items:center;justify-content:center;gap:8px;
+    }
+    .auth-box .btn-auth-primary:hover:not(:disabled){
+      filter:brightness(1.12);transform:translateY(-2px);
+      box-shadow:0 6px 20px rgba(201,168,76,.35);
+    }
+    .auth-box .btn-auth-primary:disabled{opacity:.6;cursor:not-allowed;}
+    .auth-box .btn-google{
+      width:100%;padding:.75rem;border:1px solid var(--border,#2a2a3e);
+      border-radius:10px;background:var(--surface,#1a1a2e);color:#fff;
+      font-size:.9rem;cursor:pointer;transition:all .2s;
+      display:flex;align-items:center;justify-content:center;gap:10px;
+      margin-bottom:.8rem;
+    }
+    .auth-box .btn-google:hover:not(:disabled){background:#22223a;border-color:#666;}
+    .auth-box .btn-google:disabled{opacity:.6;cursor:not-allowed;}
+    .auth-divider{
+      display:flex;align-items:center;gap:8px;
+      margin:.8rem 0;color:var(--text-muted,#666);font-size:.75rem;
+    }
+    .auth-divider::before,.auth-divider::after{
+      content:'';flex:1;height:1px;background:var(--border,#2a2a3e);
+    }
+    .auth-error{
+      background:rgba(255,60,60,.1);border:1px solid rgba(255,80,80,.3);
+      color:#ff7070;border-radius:8px;padding:.6rem .9rem;
+      font-size:.82rem;margin-bottom:.9rem;display:none;
+    }
+    .auth-error.show{display:block;}
+    .auth-switch{
+      text-align:center;margin-top:1rem;font-size:.82rem;
+      color:var(--text-muted,#888);
+    }
+    .auth-switch a{color:var(--gold,#c9a84c);cursor:pointer;text-decoration:underline;}
+    .auth-box .close-btn{
+      position:absolute;top:.7rem;right:.7rem;background:none;border:none;
+      color:var(--text-muted,#888);cursor:pointer;font-size:1.1rem;padding:4px;
+    }
+    .auth-box .close-btn:hover{color:#fff;}
+
+    /* ── Botões na login card ──────────────────── */
+    .login-actions{display:flex;flex-direction:column;gap:.7rem;width:100%;}
+    .btn-login-google{
+      display:flex;align-items:center;justify-content:center;gap:10px;
+      padding:.85rem 1.2rem;border-radius:10px;
+      border:1px solid var(--border,#2a2a3e);
+      background:var(--surface,#1a1a2e);color:#fff;
+      font-size:.95rem;cursor:pointer;transition:all .2s;width:100%;
+    }
+    .btn-login-google:hover{background:#22223a;border-color:#888;}
+    .btn-login-email{
+      display:flex;align-items:center;justify-content:center;gap:8px;
+      padding:.85rem 1.2rem;border-radius:10px;border:none;
+      background:linear-gradient(135deg,#b8922a,#c9a84c);
+      color:#0f0f1a;font-family:'Cinzel',serif;font-weight:700;
+      font-size:.95rem;cursor:pointer;transition:all .2s;width:100%;
+    }
+    .btn-login-email:hover{filter:brightness(1.1);transform:translateY(-2px);}
+    .btn-register{
+      display:flex;align-items:center;justify-content:center;gap:8px;
+      padding:.85rem 1.2rem;border-radius:10px;
+      border:1px solid var(--gold,#c9a84c);
+      background:transparent;color:var(--gold,#c9a84c);
+      font-family:'Cinzel',serif;font-weight:600;
+      font-size:.95rem;cursor:pointer;transition:all .2s;width:100%;
+    }
+    .btn-register:hover{background:rgba(201,168,76,.1);}
+    .spin-icon{animation:spin .8s linear infinite;display:inline-block;}
+    @keyframes spin{to{transform:rotate(360deg);}}
+  </style>
 </head>
 <body class="login-page">
 
+  <!-- ── Loader inicial ─────────────────────────────────────── -->
+  <div id="pageLoader">
+    <div class="loader-shield"><i class="fas fa-shield-halved"></i></div>
+    <p>Carregando RPG Quests…</p>
+  </div>
+
+  <!-- ── Partículas de fundo ────────────────────────────────── -->
   <div class="particles" id="particles"></div>
 
+  <!-- ── Container principal ───────────────────────────────── -->
   <div class="login-container">
 
-    <!-- Logo -->
+    <!-- Logo / Brasão -->
     <div class="login-logo">
       <div class="shield-icon">
         <i class="fas fa-shield-halved"></i>
@@ -30,41 +163,41 @@
 
       <div class="login-stats-preview">
         <div class="stat-item"><i class="fas fa-scroll"></i><span>Quests Épicas</span></div>
-        <div class="stat-item"><i class="fas fa-trophy"></i><span>Ranking Global</span></div>
+        <div class="stat-item"><i class="fas fa-trophy"></i><span>Rankings Globais</span></div>
         <div class="stat-item"><i class="fas fa-coins"></i><span>Recompensas</span></div>
       </div>
 
-      <div class="login-divider"><span>Escolha seu acesso</span></div>
+      <div class="login-divider"><span>Escolha como entrar</span></div>
 
-      <!-- Google Login -->
-      <button class="btn-google" id="googleLoginBtn">
-        <svg width="22" height="22" viewBox="0 0 48 48">
-          <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
-          <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/>
-          <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/>
-          <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
-          <path fill="none" d="M0 0h48v48H0z"/>
-        </svg>
-        <span>Entrar com Google</span>
-        <i class="fas fa-arrow-right btn-arrow"></i>
-      </button>
+      <!-- Ações de login -->
+      <div class="login-actions">
+        <!-- Google -->
+        <button class="btn-login-google" id="googleBtn" type="button">
+          <svg width="20" height="20" viewBox="0 0 48 48">
+            <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
+            <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/>
+            <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/>
+            <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.18 1.48-4.97 2.35-8.16 2.35-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
+          </svg>
+          <span>Entrar com Google</span>
+        </button>
 
-      <!-- GitHub Login -->
-      <button class="btn-github" id="githubLoginBtn">
-        <i class="fab fa-github"></i>
-        <span>Entrar com GitHub</span>
-        <i class="fas fa-arrow-right btn-arrow"></i>
-      </button>
+        <!-- E-mail login -->
+        <button class="btn-login-email" id="openLoginBtn" type="button">
+          <i class="fas fa-envelope"></i>
+          <span>Entrar com E-mail</span>
+        </button>
 
-      <!-- Loading state -->
-      <div class="login-loading" id="loginLoading" style="display:none">
-        <i class="fas fa-spinner fa-spin"></i>
-        <span>Autenticando...</span>
+        <!-- Cadastrar-se -->
+        <button class="btn-register" id="openRegisterBtn" type="button">
+          <i class="fas fa-user-plus"></i>
+          <span>Cadastrar-se</span>
+        </button>
       </div>
 
-      <p class="login-disclaimer">
+      <p class="login-disclaimer" style="margin-top:1rem">
         <i class="fas fa-lock"></i>
-        Login seguro via Firebase Auth. Nunca pedimos sua senha.
+        Login seguro via Firebase Auth. Nunca pedimos sua senha do Discord.
       </p>
     </div>
 
@@ -86,117 +219,336 @@
         <p>Suba de nível e desbloqueie quests exclusivas</p>
       </div>
     </div>
-
   </div>
 
-  <!-- Toast de erro -->
-  <div class="error-toast" id="errorToast" style="display:none">
-    <i class="fas fa-exclamation-triangle"></i>
-    <span id="errorMsg">Erro de autenticação</span>
-    <button onclick="document.getElementById('errorToast').style.display='none'" style="margin-left:8px;background:none;border:none;color:inherit;cursor:pointer;">✕</button>
+  <!-- ════════════════════════════════════════════════════════
+       MODAL: LOGIN (E-mail + Senha)
+  ═════════════════════════════════════════════════════════ -->
+  <div class="auth-overlay" id="loginOverlay">
+    <div class="auth-box">
+      <button class="close-btn" id="closeLogin"><i class="fas fa-times"></i></button>
+      <h2>⚔️ Entrar</h2>
+      <p class="auth-subtitle">Bem-vindo de volta, aventureiro!</p>
+      <div class="auth-error" id="loginError"></div>
+
+      <!-- Google no modal de login também -->
+      <button class="btn-google" id="googleBtnModal" type="button">
+        <svg width="18" height="18" viewBox="0 0 48 48">
+          <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
+          <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/>
+          <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/>
+          <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.18 1.48-4.97 2.35-8.16 2.35-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
+        </svg>
+        Continuar com Google
+      </button>
+
+      <div class="auth-divider"><span>ou com e-mail</span></div>
+
+      <div class="form-group">
+        <label><i class="fas fa-envelope"></i> E-mail</label>
+        <input type="email" id="loginEmail" placeholder="seu@email.com" autocomplete="email"/>
+      </div>
+      <div class="form-group">
+        <label><i class="fas fa-lock"></i> Senha</label>
+        <input type="password" id="loginPassword" placeholder="••••••••" autocomplete="current-password"/>
+      </div>
+
+      <button class="btn-auth-primary" id="submitLoginBtn" type="button">
+        <i class="fas fa-sign-in-alt"></i> Entrar
+      </button>
+
+      <div class="auth-switch">
+        Não tem conta? <a id="goToRegister">Cadastre-se aqui</a> ·
+        <a id="forgotPasswordLink">Esqueci a senha</a>
+      </div>
+    </div>
   </div>
 
-  <!-- Firebase SDK -->
+  <!-- ════════════════════════════════════════════════════════
+       MODAL: CADASTRO
+  ═════════════════════════════════════════════════════════ -->
+  <div class="auth-overlay" id="registerOverlay">
+    <div class="auth-box">
+      <button class="close-btn" id="closeRegister"><i class="fas fa-times"></i></button>
+      <h2>🛡️ Criar Conta</h2>
+      <p class="auth-subtitle">Junte-se à guilda de aventureiros!</p>
+      <div class="auth-error" id="registerError"></div>
+
+      <div class="form-group">
+        <label><i class="fas fa-user"></i> Nome de Aventureiro</label>
+        <input type="text" id="regName" placeholder="Ex: KayhamWarrior" autocomplete="nickname" maxlength="30"/>
+      </div>
+      <div class="form-group">
+        <label><i class="fas fa-envelope"></i> E-mail</label>
+        <input type="email" id="regEmail" placeholder="seu@email.com" autocomplete="email"/>
+      </div>
+      <div class="form-group">
+        <label><i class="fas fa-lock"></i> Senha <small>(mín. 6 caracteres)</small></label>
+        <input type="password" id="regPassword" placeholder="••••••••" autocomplete="new-password"/>
+      </div>
+      <div class="form-group">
+        <label><i class="fas fa-lock"></i> Confirmar Senha</label>
+        <input type="password" id="regConfirm" placeholder="••••••••" autocomplete="new-password"/>
+      </div>
+
+      <button class="btn-auth-primary" id="submitRegisterBtn" type="button">
+        <i class="fas fa-user-plus"></i> Criar Conta
+      </button>
+
+      <div class="auth-switch">
+        Já tem conta? <a id="goToLogin">Entrar aqui</a>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Toast container ────────────────────────────────────── -->
+  <div class="toast-container" id="toastContainer"></div>
+
+  <!-- ═══════════════════════════════════════════════════════
+       FIREBASE AUTH LOGIC — ES Module
+  ════════════════════════════════════════════════════════ -->
   <script type="module">
-    import { initializeApp }          from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js';
-    import { getAuth, signInWithPopup, GoogleAuthProvider, GithubAuthProvider, onAuthStateChanged }
-      from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
+    import { initializeApp, getApps }      from "https://www.gstatic.com/firebasejs/12.10.0/firebase-app.js";
+    import { getAnalytics }                from "https://www.gstatic.com/firebasejs/12.10.0/firebase-analytics.js";
+    import {
+      getAuth, onAuthStateChanged,
+      signInWithPopup, GoogleAuthProvider,
+      signInWithEmailAndPassword,
+      createUserWithEmailAndPassword,
+      updateProfile,
+      sendPasswordResetEmail
+    } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-auth.js";
+    import {
+      getDatabase, ref, get, set
+    } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-database.js";
 
-    // ─── Firebase Config ────────────────────────────────────────
-    const firebaseConfig = {
-      apiKey:            "AIzaSyBXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
+    /* ── Config ─────────────────────────────────────── */
+    const cfg = {
+      apiKey:            "AIzaSyB9Tk0JEGdMgRQHVaS0zEd2Vy0Z1f-RU8Q",
       authDomain:        "marmota-rpg.firebaseapp.com",
       databaseURL:       "https://marmota-rpg-default-rtdb.firebaseio.com",
       projectId:         "marmota-rpg",
-      storageBucket:     "marmota-rpg.appspot.com",
-      messagingSenderId: "000000000000",
-      appId:             "1:000000000000:web:xxxxxxxxxxxxxxxx"
+      storageBucket:     "marmota-rpg.firebasestorage.app",
+      messagingSenderId: "1045625225684",
+      appId:             "1:1045625225684:web:e76bf77bb5c69665831641",
+      measurementId:     "G-V0T2VYP0LQ"
     };
+    const ADMIN_UID = "F69XMBOumJSiuBvQm3c63HyJAjy2";
 
-    const app  = initializeApp(firebaseConfig);
+    const app  = getApps().length ? getApps()[0] : initializeApp(cfg);
+    try { getAnalytics(app); } catch(_) {}
     const auth = getAuth(app);
+    const db   = getDatabase(app);
 
-    // ─── Verificar se já está logado ────────────────────────────
-    onAuthStateChanged(auth, async (user) => {
-      if (user) {
-        showLoading(true);
-        await registerUser(user);
-        window.location.href = '/home.html';
-      }
+    /* ── Loader hide ─────────────────────────────────── */
+    function hideLoader() {
+      document.getElementById("pageLoader").classList.add("hide");
+    }
+
+    /* ── Verificar se já está logado ─────────────────── */
+    onAuthStateChanged(auth, user => {
+      hideLoader();
+      if (user) window.location.replace("home.html");
     });
 
-    // ─── Login com Google ────────────────────────────────────────
-    document.getElementById('googleLoginBtn').addEventListener('click', async () => {
+    /* ── Criar/Garantir perfil no DB ─────────────────── */
+    async function ensureProfile(user, name = null) {
+      const r = ref(db, `users/${user.uid}`);
+      const snap = await get(r);
+      if (!snap.exists()) {
+        const displayName = name || user.displayName || "Aventureiro";
+        await set(r, {
+          uid:          user.uid,
+          email:        user.email || "",
+          username:     displayName,
+          nickname:     displayName,
+          photoURL:     user.photoURL || "",
+          coins:        0, xp: 0, level: 1,
+          role:         user.uid === ADMIN_UID ? "admin" : "user",
+          badges:       [],
+          coinsDaily:   0, coinsWeekly: 0, coinsMonthly: 0,
+          created_at:   Date.now()
+        });
+      } else if (user.uid === ADMIN_UID) {
+        const d = snap.val();
+        if (d.role !== "admin") await set(ref(db, `users/${user.uid}/role`), "admin");
+      }
+    }
+
+    /* ── Toast ───────────────────────────────────────── */
+    function toast(msg, type = "info") {
+      const c = document.getElementById("toastContainer");
+      if (!c) return;
+      const icons = { success:"fa-check-circle", error:"fa-times-circle",
+                      warning:"fa-exclamation-triangle", info:"fa-info-circle" };
+      const el = document.createElement("div");
+      el.className = `toast ${type}`;
+      el.innerHTML = `<i class="fas ${icons[type]||icons.info}"></i><span>${msg}</span>`;
+      c.appendChild(el);
+      setTimeout(() => el.remove(), 3800);
+    }
+
+    /* ── Erro Firebase → PT-BR ───────────────────────── */
+    function fErr(code) {
+      const m = {
+        "auth/email-already-in-use":   "Este e-mail já está cadastrado.",
+        "auth/invalid-email":          "E-mail inválido.",
+        "auth/weak-password":          "Senha muito fraca (mínimo 6 caracteres).",
+        "auth/user-not-found":         "Usuário não encontrado.",
+        "auth/wrong-password":         "Senha incorreta.",
+        "auth/invalid-credential":     "E-mail ou senha incorretos.",
+        "auth/too-many-requests":      "Muitas tentativas. Aguarde.",
+        "auth/popup-closed-by-user":   "Login cancelado.",
+        "auth/network-request-failed": "Sem conexão. Verifique a internet."
+      };
+      return m[code] || "Ocorreu um erro. Tente novamente.";
+    }
+
+    /* ── Botão loading ───────────────────────────────── */
+    function setLoading(btn, on, html) {
+      btn.disabled = on;
+      btn.innerHTML = on
+        ? '<i class="fas fa-spinner spin-icon"></i> Aguarde...'
+        : html;
+    }
+
+    /* ── Mostrar erro no modal ───────────────────────── */
+    function showErr(id, msg) {
+      const el = document.getElementById(id);
+      el.textContent = msg;
+      el.classList.add("show");
+      setTimeout(() => el.classList.remove("show"), 5000);
+    }
+
+    /* ════════════════════════════════════════════════════
+       CONTROLE DE MODAIS
+    ════════════════════════════════════════════════════ */
+    const loginOv    = document.getElementById("loginOverlay");
+    const registerOv = document.getElementById("registerOverlay");
+
+    const openLogin    = () => loginOv.classList.add("open");
+    const openRegister = () => registerOv.classList.add("open");
+    const closeLogin   = () => loginOv.classList.remove("open");
+    const closeRegister= () => registerOv.classList.remove("open");
+
+    document.getElementById("openLoginBtn")   .addEventListener("click", openLogin);
+    document.getElementById("openRegisterBtn").addEventListener("click", openRegister);
+    document.getElementById("closeLogin")     .addEventListener("click", closeLogin);
+    document.getElementById("closeRegister")  .addEventListener("click", closeRegister);
+
+    document.getElementById("goToRegister").addEventListener("click", () => { closeLogin(); openRegister(); });
+    document.getElementById("goToLogin")   .addEventListener("click", () => { closeRegister(); openLogin(); });
+
+    [loginOv, registerOv].forEach(o => {
+      o.addEventListener("click", e => { if (e.target === o) o.classList.remove("open"); });
+    });
+
+    /* ════════════════════════════════════════════════════
+       LOGIN GOOGLE  (botão da landing + botão do modal)
+    ════════════════════════════════════════════════════ */
+    async function doGoogleLogin(btn) {
+      const orig = btn.innerHTML;
+      setLoading(btn, true, orig);
       try {
-        showLoading(true);
-        const provider = new GoogleAuthProvider();
-        const result   = await signInWithPopup(auth, provider);
-        await registerUser(result.user);
-        window.location.href = '/home.html';
+        const result = await signInWithPopup(auth, new GoogleAuthProvider());
+        await ensureProfile(result.user);
+        window.location.replace("home.html");
       } catch (err) {
-        showLoading(false);
-        showError(err.code === 'auth/popup-closed-by-user'
-          ? 'Login cancelado.'
-          : `Erro: ${err.message}`);
+        setLoading(btn, false, orig);
+        if (err.code !== "auth/popup-closed-by-user") {
+          toast(fErr(err.code), "error");
+        }
       }
-    });
+    }
 
-    // ─── Login com GitHub ────────────────────────────────────────
-    document.getElementById('githubLoginBtn').addEventListener('click', async () => {
+    document.getElementById("googleBtn")     .addEventListener("click", e => doGoogleLogin(e.currentTarget));
+    document.getElementById("googleBtnModal").addEventListener("click", e => doGoogleLogin(e.currentTarget));
+
+    /* ════════════════════════════════════════════════════
+       LOGIN E-MAIL / SENHA
+    ════════════════════════════════════════════════════ */
+    const submitLoginBtn  = document.getElementById("submitLoginBtn");
+    const submitLoginHTML = submitLoginBtn.innerHTML;
+
+    async function doEmailLogin() {
+      const email    = document.getElementById("loginEmail").value.trim();
+      const password = document.getElementById("loginPassword").value;
+      if (!email || !password) return showErr("loginError", "Preencha e-mail e senha.");
+
+      setLoading(submitLoginBtn, true, submitLoginHTML);
       try {
-        showLoading(true);
-        const provider = new GithubAuthProvider();
-        const result   = await signInWithPopup(auth, provider);
-        await registerUser(result.user);
-        window.location.href = '/home.html';
+        const result = await signInWithEmailAndPassword(auth, email, password);
+        await ensureProfile(result.user);
+        window.location.replace("home.html");
       } catch (err) {
-        showLoading(false);
-        showError(err.code === 'auth/popup-closed-by-user'
-          ? 'Login cancelado.'
-          : `Erro: ${err.message}`);
+        setLoading(submitLoginBtn, false, submitLoginHTML);
+        showErr("loginError", fErr(err.code));
+      }
+    }
+
+    submitLoginBtn.addEventListener("click", doEmailLogin);
+    document.getElementById("loginPassword")
+      .addEventListener("keydown", e => { if (e.key === "Enter") doEmailLogin(); });
+
+    /* ── Esqueci a senha ─────────────────────────────── */
+    document.getElementById("forgotPasswordLink").addEventListener("click", async () => {
+      const email = document.getElementById("loginEmail").value.trim();
+      if (!email) return showErr("loginError", "Digite seu e-mail no campo acima.");
+      try {
+        await sendPasswordResetEmail(auth, email);
+        toast("📧 E-mail de redefinição enviado! Verifique sua caixa.", "success");
+      } catch (err) {
+        showErr("loginError", fErr(err.code));
       }
     });
 
-    // ─── Registrar/atualizar usuário no backend ──────────────────
-    async function registerUser(firebaseUser) {
-      const idToken = await firebaseUser.getIdToken();
-      await fetch('/api/auth/register', {
-        method: 'POST',
-        headers: {
-          'Content-Type':  'application/json',
-          'Authorization': `Bearer ${idToken}`
-        },
-        body: JSON.stringify({
-          username: firebaseUser.displayName || 'Adventurer',
-          email:    firebaseUser.email       || '',
-          photoURL: firebaseUser.photoURL    || '',
-          provider: firebaseUser.providerData[0]?.providerId || 'unknown'
-        })
-      });
+    /* ════════════════════════════════════════════════════
+       CADASTRO
+    ════════════════════════════════════════════════════ */
+    const submitRegBtn  = document.getElementById("submitRegisterBtn");
+    const submitRegHTML = submitRegBtn.innerHTML;
+
+    async function doRegister() {
+      const name     = document.getElementById("regName")    .value.trim();
+      const email    = document.getElementById("regEmail")   .value.trim();
+      const password = document.getElementById("regPassword").value;
+      const confirm  = document.getElementById("regConfirm") .value;
+
+      if (!name || !email || !password || !confirm)
+        return showErr("registerError", "Preencha todos os campos.");
+      if (password !== confirm)
+        return showErr("registerError", "As senhas não coincidem.");
+      if (password.length < 6)
+        return showErr("registerError", "Senha muito curta (mín. 6 caracteres).");
+      if (name.length < 2)
+        return showErr("registerError", "Nome deve ter pelo menos 2 caracteres.");
+
+      setLoading(submitRegBtn, true, submitRegHTML);
+      try {
+        const result = await createUserWithEmailAndPassword(auth, email, password);
+        await updateProfile(result.user, { displayName: name });
+        await ensureProfile(result.user, name);
+        window.location.replace("home.html");
+      } catch (err) {
+        setLoading(submitRegBtn, false, submitRegHTML);
+        showErr("registerError", fErr(err.code));
+      }
     }
 
-    function showLoading(show) {
-      document.getElementById('loginLoading').style.display  = show ? 'flex' : 'none';
-      document.getElementById('googleLoginBtn').style.display = show ? 'none' : 'flex';
-      document.getElementById('githubLoginBtn').style.display = show ? 'none' : 'flex';
-    }
+    submitRegBtn.addEventListener("click", doRegister);
+    document.getElementById("regConfirm")
+      .addEventListener("keydown", e => { if (e.key === "Enter") doRegister(); });
 
-    function showError(msg) {
-      document.getElementById('errorMsg').textContent = msg;
-      const toast = document.getElementById('errorToast');
-      toast.style.display = 'flex';
-      setTimeout(() => toast.style.display = 'none', 6000);
-    }
-  </script>
-
-  <script>
-    // Partículas animadas
-    const container = document.getElementById('particles');
+    /* ── Partículas de fundo ─────────────────────────── */
+    const ptc = document.getElementById("particles");
     for (let i = 0; i < 40; i++) {
-      const p = document.createElement('div');
-      p.className = 'particle';
-      p.style.cssText = `left:${Math.random()*100}%;animation-delay:${Math.random()*8}s;animation-duration:${6+Math.random()*8}s;width:${2+Math.random()*4}px;height:${2+Math.random()*4}px;opacity:${0.2+Math.random()*0.5}`;
-      container.appendChild(p);
+      const p = document.createElement("div");
+      p.className = "particle";
+      p.style.cssText = `left:${Math.random()*100}%;animation-delay:${Math.random()*8}s;
+        animation-duration:${6+Math.random()*8}s;
+        width:${2+Math.random()*4}px;height:${2+Math.random()*4}px;
+        opacity:${0.2+Math.random()*0.5};`;
+      ptc.appendChild(p);
     }
   </script>
 </body>

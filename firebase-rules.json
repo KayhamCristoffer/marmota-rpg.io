@@ -1,44 +1,35 @@
 {
   "rules": {
-    "rpg-quests": {
-
-      "users": {
-        "$uid": {
-          ".read":  "$uid === auth.uid || root.child('rpg-quests/users/' + auth.uid + '/role').val() === 'admin'",
-          ".write": "$uid === auth.uid || root.child('rpg-quests/users/' + auth.uid + '/role').val() === 'admin'"
+    "users": {
+      "$uid": {
+        ".read":  "$uid === auth.uid",
+        ".write": "$uid === auth.uid",
+        "role": {
+          ".write": "auth.uid === 'F69XMBOumJSiuBvQm3c63HyJAjy2'"
         }
-      },
-
-      "quests": {
-        ".read":  "auth !== null",
-        ".write": "root.child('rpg-quests/users/' + auth.uid + '/role').val() === 'admin'"
-      },
-
-      "userQuests": {
-        "$uid": {
-          ".read":  "$uid === auth.uid || root.child('rpg-quests/users/' + auth.uid + '/role').val() === 'admin'",
-          ".write": "$uid === auth.uid || root.child('rpg-quests/users/' + auth.uid + '/role').val() === 'admin'"
-        }
-      },
-
-      "submissions": {
-        ".read":  "root.child('rpg-quests/users/' + auth.uid + '/role').val() === 'admin'",
-        ".write": "auth !== null",
-        "$subId": {
-          ".read": "data.child('userId').val() === auth.uid || root.child('rpg-quests/users/' + auth.uid + '/role').val() === 'admin'"
-        }
-      },
-
-      "ranking": {
-        ".read":  "auth !== null",
-        ".write": "root.child('rpg-quests/users/' + auth.uid + '/role').val() === 'admin'"
-      },
-
-      "meta": {
-        ".read":  "root.child('rpg-quests/users/' + auth.uid + '/role').val() === 'admin'",
-        ".write": "root.child('rpg-quests/users/' + auth.uid + '/role').val() === 'admin'"
       }
-
+    },
+    "quests": {
+      ".read":  "auth !== null",
+      ".write": "auth.uid === 'F69XMBOumJSiuBvQm3c63HyJAjy2'"
+    },
+    "userQuests": {
+      "$uid": {
+        ".read":  "$uid === auth.uid || auth.uid === 'F69XMBOumJSiuBvQm3c63HyJAjy2'",
+        ".write": "$uid === auth.uid || auth.uid === 'F69XMBOumJSiuBvQm3c63HyJAjy2'"
+      }
+    },
+    "submissions": {
+      ".read":  "auth.uid === 'F69XMBOumJSiuBvQm3c63HyJAjy2'",
+      ".write": "auth !== null"
+    },
+    "rankings": {
+      ".read":  "auth !== null",
+      ".write": "auth.uid === 'F69XMBOumJSiuBvQm3c63HyJAjy2'"
+    },
+    "meta": {
+      ".read":  "auth !== null",
+      ".write": "auth.uid === 'F69XMBOumJSiuBvQm3c63HyJAjy2'"
     }
   }
 }

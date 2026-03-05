@@ -1,126 +1,128 @@
 /* ================================================================
-   RANKING.JS - Sistema de ranking por período
+   js/ranking.js  –  Ranking (100% Firebase, sem backend)
    ================================================================ */
 
-let currentPeriod = 'total';
+import "../firebase/session-manager.js";
+import { getRanking } from "../firebase/database.js";
 
-// ─── Carregar ranking ────────────────────────────────────────────
-async function loadRanking(period = 'total') {
-  currentPeriod = period;
-  const podium = document.getElementById('rankingPodium');
-  const list   = document.getElementById('rankingList');
+/* ════════════════════════════════════════════════════════════════
+   Carregar ranking
+════════════════════════════════════════════════════════════════ */
+window.loadRanking = async function loadRankingPage(period = "total") {
+  const podium = document.getElementById("rankingPodium");
+  const list   = document.getElementById("rankingList");
   if (!list) return;
 
   list.innerHTML = '<div class="loading-spinner"><i class="fas fa-spinner fa-spin"></i> Carregando ranking...</div>';
-  if (podium) podium.innerHTML = '';
+  if (podium) podium.innerHTML = "";
 
   try {
-    const res = await RPG.api(`/api/ranking?period=${period}&limit=50`);
-    if (!res) return;
-    const { ranking, myPosition } = await res.json();
+    const uid     = window.RPG.getFbUser()?.uid;
+    const ranking = await getRanking(period, 50);
 
     if (!ranking || ranking.length === 0) {
-      list.innerHTML = `
-        <div class="empty-state">
-          <i class="fas fa-trophy"></i>
-          <h3>Ranking vazio</h3>
-          <p>Seja o primeiro a completar uma quest!</p>
-        </div>`;
+      list.innerHTML = `<div class="empty-state">
+        <i class="fas fa-trophy"></i><h3>Ranking vazio</h3>
+        <p>Seja o primeiro a completar uma quest!</p></div>`;
       return;
     }
 
-    // Pódio (top 3)
+    // Pódio top 3
     if (podium) {
-      const top3 = ranking.slice(0, 3);
-      const order = [1, 0, 2]; // 2nd, 1st, 3rd no pódio visual
+      const top3  = ranking.slice(0, 3);
+      const order = [1, 0, 2]; // visual: 2º, 1º, 3º
       podium.innerHTML = order
         .filter(i => top3[i])
-        .map(i => renderPodiumItem(top3[i], i + 1))
-        .join('');
+        .map(i => renderPodiumItem(top3[i], uid))
+        .join("");
     }
 
-    // Lista completa (4+)
-    const rest = ranking.slice(3);
-    const posIcons = { 1: '🥇', 2: '🥈', 3: '🥉' };
-
-    const listHtml = ranking.map(r => {
-      const photo = r.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(r.nickname||'U')}&background=f0c040&color=000&size=38`;
+    // Lista completa
+    const posIcons = { 1:"🥇", 2:"🥈", 3:"🥉" };
+    list.innerHTML = ranking.map(r => {
+      const isMe  = r.uid === uid;
+      const photo = r.photoURL || r.avatar ||
+        `https://ui-avatars.com/api/?name=${encodeURIComponent(r.nickname||r.username||"?")}&background=1a1a2e&color=c9a84c`;
       return `
-      <div class="ranking-item ${r.isCurrentUser ? 'is-me' : ''}">
+      <div class="ranking-item ${isMe ? "is-me" : ""}">
         <span class="rank-position rank-pos-${r.position}">
           ${r.position <= 3 ? posIcons[r.position] : `#${r.position}`}
         </span>
-        <img src="${photo}" alt="${escapeHtml(r.nickname)}" class="ranking-avatar"
-             onerror="this.src='https://ui-avatars.com/api/?background=f0c040&color=000'"/>
+        <img src="${photo}" alt="${escapeHtml(r.nickname||r.username)}"
+             class="ranking-avatar"
+             onerror="this.src='https://ui-avatars.com/api/?name=?&background=1a1a2e&color=c9a84c'"/>
         <span class="ranking-name">
-          ${escapeHtml(r.nickname)}
-          ${r.isCurrentUser ? '<span style="color:var(--gold);font-size:0.7rem;margin-left:4px">(você)</span>' : ''}
-          ${r.badges && r.badges.includes('diamond') ? '<span title="Diamante">💎</span>' : ''}
-          ${r.badges && r.badges.includes('gold') && !r.badges.includes('diamond') ? '<span title="Ouro">🥇</span>' : ''}
+          ${escapeHtml(r.nickname || r.username || "Aventureiro")}
+          ${isMe ? '<span style="color:var(--gold);font-size:.7rem;margin-left:4px">(você)</span>' : ""}
+          ${r.badges?.includes("diamond") ? "<span title='Diamante'>💎</span>" : ""}
+          ${r.badges?.includes("gold") && !r.badges?.includes("diamond") ? "<span title='Ouro'>🥇</span>" : ""}
         </span>
-        <span class="ranking-level">Nv.${r.level}</span>
+        <span class="ranking-level">Nv.${r.level||1}</span>
         <span class="ranking-coins">
-          <i class="fas fa-coins" style="font-size:0.8rem"></i>
-          ${r.coins.toLocaleString('pt-BR')}
+          <i class="fas fa-coins" style="font-size:.8rem"></i>
+          ${(r.coins||0).toLocaleString("pt-BR")}
         </span>
-      </div>`;}
-    ).join('');
+      </div>`;
+    }).join("");
 
-    list.innerHTML = listHtml;
-
-    // Minha posição se não estiver no top
-    if (myPosition && !ranking.find(r => r.isCurrentUser)) {
-      const myPosEl = document.createElement('div');
-      myPosEl.style.cssText = 'text-align:center;padding:12px;color:var(--text-secondary);font-size:0.8rem;border-top:1px solid var(--border);margin-top:8px;';
-      myPosEl.textContent = `Sua posição: #${myPosition}`;
-      list.appendChild(myPosEl);
+    // Minha posição se não aparecer na lista
+    const myPos = ranking.find(r => r.uid === uid);
+    if (!myPos && uid) {
+      const allRanking = await getRanking(period, 1000);
+      const pos = allRanking.findIndex(r => r.uid === uid);
+      if (pos !== -1) {
+        const note = document.createElement("div");
+        note.style.cssText = "text-align:center;padding:12px;color:var(--text-secondary);font-size:.8rem;border-top:1px solid var(--border);margin-top:8px;";
+        note.textContent = `Sua posição: #${pos + 1}`;
+        list.appendChild(note);
+      }
     }
+
   } catch (err) {
-    console.error('loadRanking error:', err);
+    console.error("loadRanking error:", err);
     list.innerHTML = '<div class="empty-state"><i class="fas fa-exclamation-triangle"></i><h3>Erro ao carregar ranking</h3></div>';
   }
-}
+};
 
-// ─── Render pódio ────────────────────────────────────────────────
-function renderPodiumItem(user, position) {
-  const avatar = user.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.nickname||'U')}&background=f0c040&color=000&size=56`;
-  const labels = { 1: '🥇', 2: '🥈', 3: '🥉' };
+function renderPodiumItem(user, currentUid) {
+  const photo = user.photoURL || user.avatar ||
+    `https://ui-avatars.com/api/?name=${encodeURIComponent(user.nickname||"?")}&background=1a1a2e&color=c9a84c`;
+  const labels = { 1:"🥇", 2:"🥈", 3:"🥉" };
+  const isMe   = user.uid === currentUid;
 
   return `
-    <div class="podium-item pos-${position}">
-      <img src="${avatar}" alt="${escapeHtml(user.nickname)}"
+    <div class="podium-item pos-${user.position} ${isMe ? "is-me" : ""}">
+      <img src="${photo}" alt="${escapeHtml(user.nickname||user.username)}"
            class="podium-avatar"
-           onerror="this.src='https://cdn.discordapp.com/embed/avatars/0.png'"/>
-      <span class="podium-name" title="${escapeHtml(user.nickname)}">${escapeHtml(user.nickname)}</span>
-      <span class="podium-coins">
-        <i class="fas fa-coins" style="font-size:0.7rem"></i>
-        ${user.coins.toLocaleString('pt-BR')}
+           onerror="this.src='https://ui-avatars.com/api/?name=?&background=1a1a2e&color=c9a84c'"/>
+      <span class="podium-name" title="${escapeHtml(user.nickname||user.username)}">
+        ${escapeHtml(user.nickname || user.username || "?")}
       </span>
-      <div class="podium-stand">${labels[position] || position}</div>
+      <span class="podium-coins">
+        <i class="fas fa-coins" style="font-size:.7rem"></i>
+        ${(user.coins||0).toLocaleString("pt-BR")}
+      </span>
+      <div class="podium-stand">${labels[user.position] || user.position}</div>
     </div>`;
 }
 
-// ─── Setup filtros de período ────────────────────────────────────
-document.addEventListener('DOMContentLoaded', () => {
-  const rankingPage = document.getElementById('page-ranking');
+/* ── Filtros de período ──────────────────────────────────────── */
+document.addEventListener("DOMContentLoaded", () => {
+  const rankingPage = document.getElementById("page-ranking");
   if (!rankingPage) return;
 
-  rankingPage.querySelectorAll('.filter-btn[data-period]').forEach(btn => {
-    btn.addEventListener('click', () => {
-      rankingPage.querySelectorAll('.filter-btn[data-period]').forEach(b => b.classList.remove('active'));
-      btn.classList.add('active');
-      loadRanking(btn.dataset.period);
+  rankingPage.querySelectorAll(".filter-btn[data-period]").forEach(btn => {
+    btn.addEventListener("click", () => {
+      rankingPage.querySelectorAll(".filter-btn[data-period]").forEach(b => b.classList.remove("active"));
+      btn.classList.add("active");
+      window.loadRanking(btn.dataset.period);
     });
   });
 });
 
-// ─── Helpers ──────────────────────────────────────────────────── */
 function escapeHtml(text) {
-  if (!text) return '';
-  const div = document.createElement('div');
-  div.appendChild(document.createTextNode(text));
-  return div.innerHTML;
+  if (!text) return "";
+  const d = document.createElement("div");
+  d.appendChild(document.createTextNode(text));
+  return d.innerHTML;
 }
-
-// Expor funções globalmente (chamadas por home.js)
-window.loadRanking = loadRanking;
