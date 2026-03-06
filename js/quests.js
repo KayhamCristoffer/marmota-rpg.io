@@ -1,404 +1,346 @@
 /* ================================================================
-   QUESTS.JS - Pegar quests e enviar prints
+   js/quests.js  –  Pegar quests e enviar prints (100% Firebase)
    ================================================================ */
 
-let currentFilter = 'all';
-let selectedUserQuestId = null;  // stores questId for the submit
+import "../firebase/session-manager.js";
+import {
+  getQuests, getUserQuests, takeQuest as fbTakeQuest,
+  submitQuestProof
+} from "../firebase/database.js";
 
-// ─── Carregar quests disponíveis ─────────────────────────────────
-async function loadQuests(filter = 'all') {
-  currentFilter = filter;
-  const grid = document.getElementById('questsGrid');
+/* ─── Estado local ──────────────────────────────────────────── */
+let _currentFilter    = "all";
+let _selectedUQId     = null;   // userQuestId selecionado para envio
+
+/* ─── Carregar quests disponíveis ───────────────────────────── */
+window.loadQuests = async function loadQuestsPage(filter = "all") {
+  _currentFilter = filter;
+  const grid = document.getElementById("questsGrid");
   if (!grid) return;
 
   grid.innerHTML = '<div class="loading-spinner"><i class="fas fa-spinner fa-spin"></i> Carregando quests...</div>';
 
   try {
-    const url = filter !== 'all' ? `/api/quests?type=${filter}` : '/api/quests';
-    const res = await RPG.api(url);
-    if (!res) return;
-    const quests = await res.json();
+    const uid    = window.RPG.getFbUser()?.uid;
+    const type   = filter !== "all" ? filter : null;
+    const quests = await getQuests(type);
+    const myUQs  = uid ? await getUserQuests(uid) : [];
 
     if (quests.length === 0) {
-      grid.innerHTML = `
-        <div class="empty-state" style="grid-column:1/-1">
-          <i class="fas fa-scroll"></i>
-          <h3>Nenhuma quest disponível</h3>
-          <p>Volte mais tarde para novas missões!</p>
-        </div>`;
+      grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1">
+        <i class="fas fa-scroll"></i><h3>Nenhuma quest disponível</h3>
+        <p>Volte mais tarde para novas missões!</p></div>`;
       return;
     }
 
-    grid.innerHTML = quests.map(q => renderQuestCard(q)).join('');
-
-    // Bind botões de pegar quest
-    grid.querySelectorAll('.btn-take-quest[data-action="take"]').forEach(btn => {
-      btn.addEventListener('click', () => takeQuest(btn.dataset.id));
+    // Mapear status do usuário para cada quest
+    const questsWithStatus = quests.map(q => {
+      const uq = myUQs.find(x => x.questId === q.id);
+      return {
+        ...q,
+        userStatus:  uq?.status || null,
+        isAvailable: !q.maxUsers || (q.currentUsers || 0) < q.maxUsers
+      };
     });
 
-    // Atualizar badge de quests disponíveis
-    const available = quests.filter(q => q.userStatus === null && q.isAvailable).length;
-    const badge = document.getElementById('availableBadge');
-    if (badge) badge.textContent = available > 0 ? available : '';
+    grid.innerHTML = questsWithStatus.map(q => _renderQuestCard(q)).join("");
+
+    // Bind botões pegar quest
+    grid.querySelectorAll('.btn-take-quest[data-action="take"]').forEach(btn => {
+      btn.addEventListener("click", () => _doTakeQuest(btn.dataset.id));
+    });
+
+    // Badge de disponíveis
+    const available = questsWithStatus.filter(q => !q.userStatus && q.isAvailable).length;
+    const badge = document.getElementById("availableBadge");
+    if (badge) badge.textContent = available > 0 ? available : "";
+
   } catch (err) {
-    console.error('loadQuests error:', err);
-    grid.innerHTML = '<div class="empty-state"><i class="fas fa-exclamation-triangle"></i><h3>Erro ao carregar</h3><p>Verifique sua conexão</p></div>';
+    console.error("loadQuests error:", err);
+    grid.innerHTML = '<div class="empty-state"><i class="fas fa-exclamation-triangle"></i><h3>Erro ao carregar</h3><p>Recarregue a página</p></div>';
   }
-}
+};
 
-// ─── Render card de quest ────────────────────────────────────────
-function renderQuestCard(q) {
+/* ─── Render card de quest ────────────────────────────────────── */
+function _renderQuestCard(q) {
   const typeLabels = {
-    daily:   { label: '☀️ Diária',  css: 'type-daily' },
-    weekly:  { label: '📅 Semanal', css: 'type-weekly' },
-    monthly: { label: '🗓️ Mensal',  css: 'type-monthly' },
-    event:   { label: '⭐ Evento',  css: 'type-event' }
+    daily:   { label: "☀️ Diária",  css: "type-daily"   },
+    weekly:  { label: "📅 Semanal", css: "type-weekly"  },
+    monthly: { label: "🗓️ Mensal",  css: "type-monthly" },
+    event:   { label: "⭐ Evento",  css: "type-event"   }
   };
+  const typeInfo = typeLabels[q.type] || { label: q.type, css: "" };
 
-  const typeInfo = typeLabels[q.type] || { label: q.type, css: '' };
-
-  let btnHtml = '';
-  const status = q.userStatus;
-
-  if (status === 'active') {
+  let btnHtml = "";
+  if (q.userStatus === "active")
     btnHtml = `<button class="btn-take-quest taken" disabled>📜 Em progresso</button>`;
-  } else if (status === 'pending_review') {
+  else if (q.userStatus === "pending_review")
     btnHtml = `<button class="btn-take-quest pending" disabled>⏳ Em análise</button>`;
-  } else if (status === 'completed') {
+  else if (q.userStatus === "completed")
     btnHtml = `<button class="btn-take-quest completed" disabled>✅ Concluída</button>`;
-  } else if (status === 'rejected') {
+  else if (q.userStatus === "rejected")
     btnHtml = `<button class="btn-take-quest taken" disabled>❌ Rejeitada</button>`;
-  } else if (!q.isAvailable) {
+  else if (!q.isAvailable)
     btnHtml = `<button class="btn-take-quest taken" disabled>🔒 Esgotada</button>`;
-  } else {
-    btnHtml = `<button class="btn-take-quest" data-action="take" data-id="${q._id}">⚔️ Pegar Quest</button>`;
-  }
-
-  const expiresHtml = q.expiresAt
-    ? `<span class="quest-expires"><i class="fas fa-clock"></i> Expira: ${new Date(q.expiresAt).toLocaleDateString('pt-BR')}</span>`
-    : '';
-
-  const slotsHtml = q.maxUsers
-    ? `<span class="quest-slots"><i class="fas fa-users"></i> ${q.currentUsers}/${q.maxUsers}</span>`
-    : '';
-
-  const xpHtml = q.rewardXP > 0
-    ? `<span class="xp-reward">+${q.rewardXP} XP</span>`
-    : '';
-
-  const levelHtml = q.minLevel > 1
-    ? `<span style="font-size:0.75rem;color:var(--text-muted)"><i class="fas fa-lock"></i> Nível ${q.minLevel}+</span>`
-    : '';
+  else
+    btnHtml = `<button class="btn-take-quest" data-action="take" data-id="${q.id}">⚔️ Pegar Quest</button>`;
 
   return `
-    <div class="quest-card" data-type="${q.type}" data-id="${q._id}">
+    <div class="quest-card" data-type="${q.type}" data-id="${q.id}">
       <div class="quest-type-badge ${typeInfo.css}">${typeInfo.label}</div>
       <h3 class="quest-title">${escapeHtml(q.title)}</h3>
       <p class="quest-description">${escapeHtml(q.description)}</p>
       <div class="quest-meta">
         <span class="quest-reward">
-          <i class="fas fa-coins"></i> +${q.rewardCoins} moedas ${xpHtml}
+          <i class="fas fa-coins"></i> +${q.rewardCoins || 0} moedas
+          ${q.rewardXP > 0 ? `<span class="xp-reward">+${q.rewardXP} XP</span>` : ""}
         </span>
-        ${slotsHtml}
-        ${levelHtml}
-        ${expiresHtml}
+        ${q.maxUsers ? `<span class="quest-slots"><i class="fas fa-users"></i> ${q.currentUsers||0}/${q.maxUsers}</span>` : ""}
+        ${q.minLevel > 1 ? `<span style="font-size:.75rem;color:var(--text-muted)"><i class="fas fa-lock"></i> Nível ${q.minLevel}+</span>` : ""}
+        ${q.expiresAt ? `<span class="quest-expires"><i class="fas fa-clock"></i> Expira: ${new Date(q.expiresAt).toLocaleDateString("pt-BR")}</span>` : ""}
       </div>
       ${btnHtml}
     </div>`;
 }
 
-// ─── Pegar quest ─────────────────────────────────────────────────
-async function takeQuest(questId) {
+/* ─── Pegar quest ─────────────────────────────────────────────── */
+async function _doTakeQuest(questId) {
   const btn = document.querySelector(`.btn-take-quest[data-id="${questId}"]`);
-  if (btn) {
-    btn.disabled = true;
-    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
-  }
+  if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>'; }
 
   try {
-    const res = await RPG.api(`/api/quests/${questId}/take`, { method: 'POST' });
-    if (!res) return;
-
-    if (res.ok) {
-      showToast('🗡️ Quest aceita! Agora complete a missão!', 'success');
-      await loadQuests(currentFilter);
-      await loadMyQuests();
-
-      // Atualizar badge de ativas
-      const statsRes = await RPG.api('/api/users/stats');
-      if (statsRes) {
-        const stats = await statsRes.json();
-        const pendingBadge = document.getElementById('pendingBadge');
-        if (pendingBadge) pendingBadge.textContent = stats.quests.active > 0 ? stats.quests.active : '';
-      }
-    } else {
-      const err = await res.json();
-      showToast(err.error || 'Erro ao pegar quest', 'error');
-      if (btn) {
-        btn.disabled = false;
-        btn.innerHTML = '⚔️ Pegar Quest';
-      }
-    }
+    const uid = window.RPG.getFbUser()?.uid;
+    if (!uid) throw new Error("Não logado");
+    await fbTakeQuest(uid, questId);
+    window.showToast?.("🗡️ Quest aceita! Complete a missão!", "success");
+    await window.loadQuests(_currentFilter);
+    await window.loadMyQuests();
   } catch (err) {
-    showToast('Erro de conexão', 'error');
-    if (btn) { btn.disabled = false; btn.innerHTML = '⚔️ Pegar Quest'; }
+    window.showToast?.(err.message || "Erro ao pegar quest", "error");
+    if (btn) { btn.disabled = false; btn.innerHTML = "⚔️ Pegar Quest"; }
   }
 }
 
-// ─── Carregar minhas quests ──────────────────────────────────────
-async function loadMyQuests(filter = 'all') {
-  const list = document.getElementById('myQuestsList');
+/* ─── Carregar minhas quests ─────────────────────────────────── */
+window.loadMyQuests = async function loadMyQuestsPage(filter = "all") {
+  const list = document.getElementById("myQuestsList");
   if (!list) return;
 
   list.innerHTML = '<div class="loading-spinner"><i class="fas fa-spinner fa-spin"></i> Carregando...</div>';
 
   try {
-    const url = filter !== 'all' ? `/api/quests/my?status=${filter}` : '/api/quests/my';
-    const res = await RPG.api(url);
-    if (!res) return;
-    const myQuests = await res.json();
+    const uid = window.RPG.getFbUser()?.uid;
+    if (!uid) {
+      list.innerHTML = '<div class="empty-state"><i class="fas fa-lock"></i><h3>Faça login para ver suas quests</h3></div>';
+      return;
+    }
+    let myQuests = await getUserQuests(uid);
+    if (filter !== "all") myQuests = myQuests.filter(q => q.status === filter);
 
     if (myQuests.length === 0) {
-      list.innerHTML = `
-        <div class="empty-state">
-          <i class="fas fa-scroll"></i>
-          <h3>Nenhuma quest aqui</h3>
-          <p>Vá em "Pegar Quests" para começar sua jornada!</p>
-        </div>`;
+      list.innerHTML = `<div class="empty-state"><i class="fas fa-scroll"></i>
+        <h3>Nenhuma quest aqui</h3>
+        <p>Vá em "Pegar Quests" para começar!</p></div>`;
       return;
     }
 
-    list.innerHTML = myQuests.map(uq => renderMyQuestItem(uq)).join('');
+    list.innerHTML = myQuests.map(uq => _renderMyQuestItem(uq)).join("");
 
-    // Bind botões de submit
-    list.querySelectorAll('.btn-submit-quest').forEach(btn => {
-      btn.addEventListener('click', () => openSubmitModal(btn.dataset.id, btn.dataset.title));
+    list.querySelectorAll(".btn-submit-quest").forEach(btn => {
+      btn.addEventListener("click", () => _openSubmitModal(btn.dataset.id, btn.dataset.title));
     });
+
+    // Atualizar badge de ativas
+    const pendingBadge = document.getElementById("pendingBadge");
+    if (pendingBadge) {
+      const active = myQuests.filter(q => q.status === "active").length;
+      pendingBadge.textContent = active > 0 ? active : "";
+    }
+
   } catch (err) {
-    console.error('loadMyQuests error:', err);
+    console.error("loadMyQuests error:", err);
     list.innerHTML = '<div class="empty-state"><i class="fas fa-exclamation-triangle"></i><h3>Erro ao carregar</h3></div>';
   }
-}
+};
 
-// ─── Render item de minha quest ──────────────────────────────────
-function renderMyQuestItem(uq) {
-  // Firebase: uq is flat — questTitle, rewardCoins, questType are top-level fields
-  const title       = uq.questTitle  || 'Quest';
-  const rewardCoins = uq.rewardCoins || 0;
-  const questType   = uq.questType   || 'daily';
-
+/* ─── Render item de minha quest ─────────────────────────────── */
+function _renderMyQuestItem(uq) {
   const statusLabels = {
-    active:         { label: 'Ativa',       css: 'status-active' },
-    pending_review: { label: 'Em Análise',  css: 'status-pending_review' },
-    completed:      { label: 'Concluída',   css: 'status-completed' },
-    rejected:       { label: 'Rejeitada',   css: 'status-rejected' },
-    failed:         { label: 'Falhou',      css: 'status-failed' }
+    active:         { label: "Ativa",       css: "status-active" },
+    pending_review: { label: "Em Análise",  css: "status-pending_review" },
+    completed:      { label: "Concluída",   css: "status-completed" },
+    rejected:       { label: "Rejeitada",   css: "status-rejected" },
+    failed:         { label: "Falhou",      css: "status-failed" }
   };
-  const statusInfo = statusLabels[uq.status] || { label: uq.status, css: '' };
-  const typeColors = { daily: 'var(--orange)', weekly: 'var(--blue)', monthly: 'var(--purple-light)', event: 'var(--gold)' };
-  const iconColor   = typeColors[questType] || 'var(--gold)';
+  const typeColors = {
+    daily: "var(--orange)", weekly: "var(--blue)",
+    monthly: "var(--purple-light)", event: "var(--gold)"
+  };
+  const s = statusLabels[uq.status] || { label: uq.status, css: "" };
+  const iconColor = typeColors[uq.questType] || "var(--gold)";
 
-  let actionBtn = '';
-  if (uq.status === 'active') {
-    actionBtn = `<button class="btn-submit-quest" data-id="${uq.questId}" data-title="${escapeHtml(title)}">
-      <i class="fas fa-upload"></i> Enviar Print
-    </button>`;
-  } else if (uq.status === 'pending_review') {
-    actionBtn = `<button class="btn-submit-quest" style="background:rgba(249,115,22,0.15);color:var(--orange)" disabled>
-      <i class="fas fa-clock"></i> Aguardando
-    </button>`;
-  } else if (uq.status === 'completed') {
-    actionBtn = `<button class="btn-submit-quest" style="background:rgba(34,197,94,0.15);color:var(--green)" disabled>
-      <i class="fas fa-check"></i> +${rewardCoins} moedas
-    </button>`;
-  } else if (uq.status === 'rejected') {
-    actionBtn = `<button class="btn-submit-quest" style="background:rgba(239,68,68,0.15);color:var(--red)" disabled>
-      <i class="fas fa-times"></i> Rejeitada
-    </button>`;
+  let btn = "";
+  if (uq.status === "active") {
+    btn = `<button class="btn-submit-quest" data-id="${uq.id}" data-title="${escapeHtml(uq.questTitle||"")}">
+      <i class="fas fa-upload"></i> Enviar Print</button>`;
+  } else if (uq.status === "pending_review") {
+    btn = `<button class="btn-submit-quest" style="background:rgba(249,115,22,.15);color:var(--orange)" disabled>
+      <i class="fas fa-clock"></i> Aguardando</button>`;
+  } else if (uq.status === "completed") {
+    btn = `<button class="btn-submit-quest" style="background:rgba(34,197,94,.15);color:var(--green)" disabled>
+      <i class="fas fa-check"></i> +${uq.rewardCoins||0} moedas</button>`;
+  } else if (uq.status === "rejected") {
+    btn = `<button class="btn-submit-quest" style="background:rgba(239,68,68,.15);color:var(--red)" disabled>
+      <i class="fas fa-times"></i> Rejeitada</button>`;
   }
 
   return `
     <div class="my-quest-item">
-      <div class="my-quest-icon" style="background:rgba(255,255,255,0.05);color:${iconColor}">
+      <div class="my-quest-icon" style="color:${iconColor}">
         <i class="fas fa-scroll"></i>
       </div>
       <div class="my-quest-info">
-        <div class="my-quest-title">${escapeHtml(title)}</div>
+        <div class="my-quest-title">${escapeHtml(uq.questTitle || "Quest")}</div>
         <div class="my-quest-meta">
-          <span class="status-badge ${statusInfo.css}">${statusInfo.label}</span>
-          <span><i class="fas fa-coins"></i> ${rewardCoins} moedas</span>
-          <span style="font-size:0.7rem;color:var(--text-muted)">
-            ${uq.takenAt ? new Date(uq.takenAt).toLocaleDateString('pt-BR') : ''}
+          <span class="status-badge ${s.css}">${s.label}</span>
+          <span><i class="fas fa-coins"></i> ${uq.rewardCoins||0} moedas</span>
+          <span style="font-size:.7rem;color:var(--text-muted)">
+            ${uq.takenAt ? new Date(uq.takenAt).toLocaleDateString("pt-BR") : ""}
           </span>
-          ${uq.reviewNote ? `<span style="color:var(--red);font-size:0.75rem">❌ ${escapeHtml(uq.reviewNote)}</span>` : ''}
+          ${uq.reviewNote ? `<span style="color:var(--red);font-size:.75rem">❌ ${escapeHtml(uq.reviewNote)}</span>` : ""}
         </div>
       </div>
-      ${actionBtn}
+      ${btn}
     </div>`;
 }
 
-// ─── Modal de envio de print ─────────────────────────────────────
-function openSubmitModal(userQuestId, questTitle) {
-  selectedUserQuestId = userQuestId;
-  document.getElementById('submitQuestTitle').textContent = `Quest: ${questTitle}`;
-  document.getElementById('submitModal').style.display = 'flex';
-  document.getElementById('imagePreview').style.display = 'none';
-  document.getElementById('uploadArea').style.display = 'block';
-  document.getElementById('printInput').value = '';
+/* ─── Modal de envio de print ─────────────────────────────────── */
+function _openSubmitModal(userQuestId, questTitle) {
+  _selectedUQId = userQuestId;
+  const modal = document.getElementById("submitModal");
+  if (!modal) return;
+  modal.style.display = "flex";
+  const titleEl = document.getElementById("submitQuestTitle");
+  if (titleEl) titleEl.textContent = `Quest: ${questTitle}`;
+  const preview = document.getElementById("imagePreview");
+  const upload  = document.getElementById("uploadArea");
+  const input   = document.getElementById("printInput");
+  if (preview) preview.style.display = "none";
+  if (upload)  upload.style.display  = "block";
+  if (input)   input.value = "";
 }
 
-document.addEventListener('DOMContentLoaded', () => {
-  // Modal controls
-  const submitModal = document.getElementById('submitModal');
-  const closeSubmitModal = document.getElementById('closeSubmitModal');
-  const cancelSubmitBtn = document.getElementById('cancelSubmitBtn');
-  const confirmSubmitBtn = document.getElementById('confirmSubmitBtn');
-  const uploadArea = document.getElementById('uploadArea');
-  const printInput = document.getElementById('printInput');
-  const imagePreview = document.getElementById('imagePreview');
-  const previewImg = document.getElementById('previewImg');
-  const removeImgBtn = document.getElementById('removeImgBtn');
-
+/* ─── DOMContentLoaded: binds de modal + filtros ─────────────── */
+document.addEventListener("DOMContentLoaded", () => {
+  const submitModal  = document.getElementById("submitModal");
   if (!submitModal) return;
 
-  const closeModal = () => {
-    submitModal.style.display = 'none';
-    selectedUserQuestId = null;
+  const closeMdl = () => {
+    submitModal.style.display = "none";
+    _selectedUQId = null;
   };
 
-  closeSubmitModal?.addEventListener('click', closeModal);
-  cancelSubmitBtn?.addEventListener('click', closeModal);
+  document.getElementById("closeSubmitModal")?.addEventListener("click", closeMdl);
+  document.getElementById("cancelSubmitBtn") ?.addEventListener("click", closeMdl);
+  submitModal.addEventListener("click", e => { if (e.target === submitModal) closeMdl(); });
 
-  // Click fora do modal para fechar
-  submitModal?.addEventListener('click', (e) => {
-    if (e.target === submitModal) closeModal();
+  const uploadArea   = document.getElementById("uploadArea");
+  const printInput   = document.getElementById("printInput");
+  const imagePreview = document.getElementById("imagePreview");
+  const previewImg   = document.getElementById("previewImg");
+  const removeBtn    = document.getElementById("removeImgBtn");
+
+  uploadArea?.addEventListener("click",    () => printInput?.click());
+  uploadArea?.addEventListener("dragover", e  => { e.preventDefault(); uploadArea.classList.add("drag-over"); });
+  uploadArea?.addEventListener("dragleave",()  => uploadArea.classList.remove("drag-over"));
+  uploadArea?.addEventListener("drop",     e  => {
+    e.preventDefault(); uploadArea.classList.remove("drag-over");
+    if (e.dataTransfer.files[0]) _handleFile(e.dataTransfer.files[0]);
+  });
+  printInput?.addEventListener("change", e => { if (e.target.files[0]) _handleFile(e.target.files[0]); });
+  removeBtn ?.addEventListener("click",  () => {
+    if (printInput)   printInput.value           = "";
+    if (imagePreview) imagePreview.style.display = "none";
+    if (uploadArea)   uploadArea.style.display   = "block";
+    if (previewImg)   previewImg.src             = "";
   });
 
-  // Upload area click
-  uploadArea?.addEventListener('click', () => printInput?.click());
-
-  // Drag & Drop
-  uploadArea?.addEventListener('dragover', (e) => {
-    e.preventDefault();
-    uploadArea.classList.add('drag-over');
-  });
-
-  uploadArea?.addEventListener('dragleave', () => uploadArea.classList.remove('drag-over'));
-
-  uploadArea?.addEventListener('drop', (e) => {
-    e.preventDefault();
-    uploadArea.classList.remove('drag-over');
-    const file = e.dataTransfer.files[0];
-    if (file) handleFileSelect(file);
-  });
-
-  printInput?.addEventListener('change', (e) => {
-    if (e.target.files[0]) handleFileSelect(e.target.files[0]);
-  });
-
-  removeImgBtn?.addEventListener('click', () => {
-    printInput.value = '';
-    imagePreview.style.display = 'none';
-    uploadArea.style.display = 'block';
-    previewImg.src = '';
-  });
-
-  function handleFileSelect(file) {
-    if (!file.type.startsWith('image/')) {
-      showToast('Apenas imagens são permitidas!', 'error');
-      return;
-    }
-    if (file.size > 5 * 1024 * 1024) {
-      showToast('Imagem muito grande (máx. 5MB)', 'error');
-      return;
-    }
-
+  function _handleFile(file) {
+    if (!file.type.startsWith("image/")) return window.showToast?.("Apenas imagens são permitidas!", "error");
+    if (file.size > 5 * 1024 * 1024)    return window.showToast?.("Imagem muito grande (máx. 5MB)", "error");
     const reader = new FileReader();
-    reader.onload = (e) => {
-      previewImg.src = e.target.result;
-      imagePreview.style.display = 'block';
-      uploadArea.style.display = 'none';
+    reader.onload = e => {
+      if (previewImg)   previewImg.src             = e.target.result;
+      if (imagePreview) imagePreview.style.display = "block";
+      if (uploadArea)   uploadArea.style.display   = "none";
     };
     reader.readAsDataURL(file);
   }
 
-  // Confirmar envio — 2 etapas: 1) upload GitHub, 2) submit quest
-  confirmSubmitBtn?.addEventListener('click', async () => {
-    if (!selectedUserQuestId) return;
-    if (!printInput.files[0]) {
-      showToast('Selecione uma imagem como comprovante!', 'warning');
-      return;
-    }
+  const confirmBtn  = document.getElementById("confirmSubmitBtn");
+  const confirmHTML = confirmBtn?.innerHTML || "Enviar";
+  confirmBtn?.addEventListener("click", async () => {
+    if (!_selectedUQId) return;
+    const file = printInput?.files[0];
+    if (!file) return window.showToast?.("Selecione uma imagem como comprovante!", "warning");
 
-    confirmSubmitBtn.disabled = true;
-    confirmSubmitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Enviando imagem...';
+    confirmBtn.disabled = true;
+    confirmBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Enviando...';
 
     try {
-      // Etapa 1: Upload da imagem para o GitHub via backend
-      const formData = new FormData();
-      formData.append('print',   printInput.files[0]);
-      formData.append('questId', selectedUserQuestId);
+      const uid = window.RPG.getFbUser()?.uid;
+      if (!uid) throw new Error("Não logado");
 
-      const uploadRes = await RPG.uploadImage('/api/upload/quest', formData);
-      if (!uploadRes || !uploadRes.ok) {
-        const err = await uploadRes?.json();
-        showToast(err?.error || 'Erro ao fazer upload da imagem', 'error');
-        return;
-      }
-      const { url: printUrl, path: printPath } = await uploadRes.json();
+      // Converter imagem para base64 e salvar URL de dados no Firebase
+      const base64  = await _fileToBase64(file);
+      const printUrl = `data:${file.type};base64,${base64}`;
 
-      confirmSubmitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Enviando para revisão...';
+      await submitQuestProof(uid, _selectedUQId, printUrl);
 
-      // Etapa 2: Notificar o backend da submissão
-      const res = await RPG.api(`/api/quests/${selectedUserQuestId}/submit`, {
-        method: 'POST',
-        body: JSON.stringify({ printUrl, printPath })
-      });
+      window.showToast?.("✅ Comprovante enviado! Aguardando revisão. ⏳", "success");
+      closeMdl();
+      await window.loadMyQuests();
+      if (typeof window.loadStats === "function") await window.loadStats();
 
-      if (res && res.ok) {
-        showToast('✅ Comprovante enviado! Aguardando revisão do admin. ⏳', 'success');
-        closeModal();
-        await loadMyQuests();
-        if (typeof loadStats === 'function') await loadStats();
-      } else {
-        const err = await res?.json();
-        showToast(err?.error || 'Erro ao enviar para revisão', 'error');
-      }
     } catch (err) {
-      showToast('Erro de conexão', 'error');
+      window.showToast?.(err.message || "Erro ao enviar comprovante", "error");
     } finally {
-      confirmSubmitBtn.disabled = false;
-      confirmSubmitBtn.innerHTML = '<i class="fas fa-paper-plane"></i> Enviar para Revisão';
+      if (confirmBtn) { confirmBtn.disabled = false; confirmBtn.innerHTML = confirmHTML; }
     }
   });
 
-  // Filtros de quests
-  document.querySelectorAll('#page-quests .filter-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      document.querySelectorAll('#page-quests .filter-btn').forEach(b => b.classList.remove('active'));
-      btn.classList.add('active');
-      loadQuests(btn.dataset.filter);
+  // Filtros quests disponíveis
+  document.querySelectorAll("#page-quests .filter-btn").forEach(btn => {
+    btn.addEventListener("click", () => {
+      document.querySelectorAll("#page-quests .filter-btn").forEach(b => b.classList.remove("active"));
+      btn.classList.add("active");
+      window.loadQuests(btn.dataset.filter);
     });
   });
 
-  // Filtros de minhas quests
-  document.querySelectorAll('#page-myquests .filter-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      document.querySelectorAll('#page-myquests .filter-btn').forEach(b => b.classList.remove('active'));
-      btn.classList.add('active');
-      loadMyQuests(btn.dataset.filter);
+  // Filtros minhas quests
+  document.querySelectorAll("#page-myquests .filter-btn").forEach(btn => {
+    btn.addEventListener("click", () => {
+      document.querySelectorAll("#page-myquests .filter-btn").forEach(b => b.classList.remove("active"));
+      btn.classList.add("active");
+      window.loadMyQuests(btn.dataset.filter);
     });
   });
 });
 
-// ─── Utilitário ──────────────────────────────────────────────────
-function escapeHtml(text) {
-  if (!text) return '';
-  const div = document.createElement('div');
-  div.appendChild(document.createTextNode(text));
-  return div.innerHTML;
+/* ─── Utilitários ─────────────────────────────────────────────── */
+function _fileToBase64(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload  = () => resolve(reader.result.split(",")[1]);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
 }
 
-// ─── Expor funções globalmente (chamadas por home.js) ─────────────
-window.loadQuests   = loadQuests;
-window.loadMyQuests = loadMyQuests;
+function escapeHtml(text) {
+  if (!text) return "";
+  const d = document.createElement("div");
+  d.appendChild(document.createTextNode(text));
+  return d.innerHTML;
+}

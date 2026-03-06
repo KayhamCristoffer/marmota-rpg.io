@@ -49,6 +49,7 @@ export async function upsertUser(uid, data) {
       username:    data.username   || data.displayName || "Aventureiro",
       nickname:    data.nickname   || data.displayName || "Aventureiro",
       photoURL:    data.photoURL   || "",
+      iconUrl:     data.iconUrl    || "",
       coins:       0,
       xp:          0,
       level:       1,
@@ -76,6 +77,12 @@ export async function upsertUser(uid, data) {
 /** Atualiza nickname do usuário */
 export async function updateNickname(uid, nickname) {
   await update(ref(db, `users/${uid}`), { nickname });
+}
+
+/** Atualiza ícone/emoji de avatar do usuário */
+export async function updateUserIcon(uid, iconUrl) {
+  // Limpar photoURL para dar prioridade ao iconUrl
+  await update(ref(db, `users/${uid}`), { iconUrl, photoURL: "" });
 }
 
 /** Atualiza role do usuário (admin only) */

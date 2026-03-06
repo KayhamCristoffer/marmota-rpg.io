@@ -73,11 +73,11 @@ window.RPG.waitForSession = (requireAuth = false, requireAdmin = false) => {
   return new Promise((resolve) => {
     const check = (profile) => {
       if (requireAuth && !profile) {
-        window.location.href = "/";
+        window.location.href = "index.html";
         return resolve(null);
       }
       if (requireAdmin && (!profile || profile.role !== "admin")) {
-        window.location.href = "/home.html";
+        window.location.href = "home.html";
         return resolve(null);
       }
       resolve(profile);
@@ -135,7 +135,7 @@ window.RPG.resetPassword = async (email) => {
 /* ── Logout ───────────────────────────────────────────────────── */
 window.RPG.signOut = async () => {
   await signOut(auth);
-  window.location.href = "/";
+  window.location.href = "index.html";
 };
 
 /* ── Tradução de erros Firebase (pt-BR) ───────────────────────── */
@@ -193,22 +193,43 @@ window.escapeHtml = (text) => {
 ════════════════════════════════════════════════════════════════ */
 function _fillSidebar(user) {
   if (!user) return;
-  const avatar = user.photoURL ||
-    `https://ui-avatars.com/api/?name=${encodeURIComponent(user.username||"?")}&background=1a1a2e&color=c9a84c&size=80`;
 
-  _set("sidebarAvatar",  el => el.src = avatar);
-  _set("sidebarName",    el => el.textContent = user.nickname || user.username);
-  _set("sidebarRole",    el => el.textContent = user.role === "admin" ? "Administrador" : "Aventureiro");
-  _set("sidebarCoins",   el => el.textContent = (user.coins || 0).toLocaleString("pt-BR"));
+  // Avatar: iconUrl (emoji) tem prioridade sobre photoURL
+  if (user.iconUrl) {
+    // Mostrar emoji na sidebar (substitui img por div-emoji se existir)
+    const imgEl   = document.getElementById("sidebarAvatar");
+    let emojiEl   = document.getElementById("sidebarAvatarEmoji");
+    if (!emojiEl && imgEl) {
+      // Criar elemento emoji inline ao lado da img
+      emojiEl = document.createElement("div");
+      emojiEl.id        = "sidebarAvatarEmoji";
+      emojiEl.className = "sidebar-avatar-emoji";
+      imgEl.parentNode.insertBefore(emojiEl, imgEl);
+    }
+    if (imgEl)   { imgEl.style.display   = "none"; }
+    if (emojiEl) { emojiEl.style.display = "flex"; emojiEl.textContent = user.iconUrl; }
+  } else {
+    const avatar = user.photoURL ||
+      `https://ui-avatars.com/api/?name=${encodeURIComponent(user.username||"?")}&background=1a1a2e&color=c9a84c&size=80`;
+    _set("sidebarAvatar", el => { el.style.display = "block"; el.src = avatar; });
+    const emojiEl = document.getElementById("sidebarAvatarEmoji");
+    if (emojiEl) emojiEl.style.display = "none";
+  }
+
+  // Truncar nome para caber no layout
+  const name = user.nickname || user.username || "Aventureiro";
+  _set("sidebarName",  el => el.textContent = name.length > 18 ? name.slice(0, 17) + "…" : name);
+  _set("sidebarRole",  el => el.textContent = user.role === "admin" ? "Administrador" : "Aventureiro");
+  _set("sidebarCoins", el => el.textContent = (user.coins || 0).toLocaleString("pt-BR"));
 
   // Level badge (não sobrescrever ícone de coroa em admin)
   const lvlEl = document.getElementById("sidebarLevel");
   if (lvlEl && !lvlEl.querySelector("i")) lvlEl.textContent = user.level || 1;
 
   // XP bar
-  const xpNeeded = (user.level || 1) * 100;
+  const xpNeeded   = (user.level || 1) * 100;
   const xpProgress = (user.xp || 0) % xpNeeded || (user.xp || 0);
-  const pct = Math.min(Math.round((xpProgress / xpNeeded) * 100), 100);
+  const pct        = Math.min(Math.round((xpProgress / xpNeeded) * 100), 100);
   _set("xpText", el => el.textContent = `${xpProgress} / ${xpNeeded}`);
   _set("xpFill", el => el.style.width = `${pct}%`);
 

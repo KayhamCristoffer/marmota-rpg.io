@@ -78,7 +78,7 @@
         <span>Perfil</span>
       </a>
       <div class="nav-divider"></div>
-      <a href="/admin.html" class="nav-item nav-admin" id="adminLink" style="display:none">
+      <a href="admin.html" class="nav-item nav-admin" id="adminLink" style="display:none">
         <i class="fas fa-crown"></i>
         <span>Painel Admin</span>
       </a>
@@ -262,11 +262,15 @@
 
       <div class="profile-card">
         <div class="profile-avatar-wrap">
-          <img src="" alt="Avatar" id="profileAvatar" class="profile-avatar"/>
+          <!-- Avatar: pode ser emoji, img de URL do Google, ou initials fallback -->
+          <div id="profileAvatarContainer" class="profile-avatar-container">
+            <img src="" alt="Avatar" id="profileAvatar" class="profile-avatar" style="display:none"/>
+            <div id="profileAvatarEmoji" class="profile-avatar profile-avatar-emoji" style="display:none"></div>
+          </div>
           <div class="profile-level" id="profileLevel">1</div>
         </div>
         <div class="profile-details">
-          <h2 id="profileUsername">Carregando...</h2>
+          <h2 id="profileUsername" class="username-truncate">Carregando...</h2>
           <span class="profile-discord-tag" id="profileDiscordTag">#0000</span>
           <span class="profile-role-badge" id="profileRoleBadge">Aventureiro</span>
         </div>
@@ -274,12 +278,26 @@
 
       <div class="profile-edit-card">
         <h3><i class="fas fa-edit"></i> Editar Perfil</h3>
+
+        <!-- Seletor de ícone/emoji -->
         <div class="form-group">
-          <label>Nickname de Exibição</label>
-          <input type="text" id="nicknameInput" placeholder="Seu nickname..." maxlength="32"/>
-          <button class="btn-primary" id="saveNicknameBtn">
-            <i class="fas fa-save"></i> Salvar
-          </button>
+          <label><i class="fas fa-smile"></i> Ícone do Perfil</label>
+          <div class="avatar-picker" id="avatarPicker">
+            <!-- populado por JS -->
+          </div>
+          <p class="avatar-picker-hint">Clique para escolher seu ícone</p>
+        </div>
+
+        <!-- Nickname -->
+        <div class="form-group">
+          <label><i class="fas fa-user"></i> Nickname de Exibição</label>
+          <div class="nickname-input-row">
+            <input type="text" id="nicknameInput" placeholder="Seu nickname..." maxlength="20"/>
+            <button class="btn-primary" id="saveNicknameBtn">
+              <i class="fas fa-save"></i> Salvar
+            </button>
+          </div>
+          <small class="input-hint">Máx. 20 caracteres</small>
         </div>
       </div>
     </section>
