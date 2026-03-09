@@ -340,6 +340,14 @@
     const auth = getAuth(app);
     const db   = getDatabase(app);
 
+    /* ── Base path helper (GitHub Pages /repo/ vs raiz /) ─── */
+    function basePath() {
+      const p = window.location.pathname;
+      const m = p.match(/^(\/[^/]+\/)/);
+      return (m && m[1] !== "/") ? m[1] : "/";
+    }
+    function goTo(page) { window.location.replace(basePath() + page); }
+
     /* ── Loader hide ─────────────────────────────────── */
     function hideLoader() {
       document.getElementById("pageLoader").classList.add("hide");
@@ -348,7 +356,7 @@
     /* ── Verificar se já está logado ─────────────────── */
     onAuthStateChanged(auth, user => {
       hideLoader();
-      if (user) window.location.replace("home.html");
+      if (user) goTo("home.html");
     });
 
     /* ── Criar/Garantir perfil no DB ─────────────────── */
@@ -452,7 +460,7 @@
       try {
         const result = await signInWithPopup(auth, new GoogleAuthProvider());
         await ensureProfile(result.user);
-        window.location.replace("home.html");
+        goTo("home.html");
       } catch (err) {
         setLoading(btn, false, orig);
         if (err.code !== "auth/popup-closed-by-user") {
@@ -479,7 +487,7 @@
       try {
         const result = await signInWithEmailAndPassword(auth, email, password);
         await ensureProfile(result.user);
-        window.location.replace("home.html");
+        goTo("home.html");
       } catch (err) {
         setLoading(submitLoginBtn, false, submitLoginHTML);
         showErr("loginError", fErr(err.code));
@@ -528,7 +536,7 @@
         const result = await createUserWithEmailAndPassword(auth, email, password);
         await updateProfile(result.user, { displayName: name });
         await ensureProfile(result.user, name);
-        window.location.replace("home.html");
+        goTo("home.html");
       } catch (err) {
         setLoading(submitRegBtn, false, submitRegHTML);
         showErr("registerError", fErr(err.code));

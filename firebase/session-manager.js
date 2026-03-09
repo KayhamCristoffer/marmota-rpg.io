@@ -24,6 +24,18 @@ import { upsertUser, getUser, getUserStats } from "./database.js";
 /* ── Namespace global RPG ─────────────────────────────────────── */
 window.RPG = window.RPG || {};
 
+/* ── Base path (GitHub Pages subdir ou raiz local) ────────────── */
+// Detecta automaticamente: /marmota-rpg.io/ em produção, / em local
+function _basePath() {
+  const p = window.location.pathname;
+  // Encontrar diretório raiz: tudo antes de index.html / home.html / admin.html
+  const match = p.match(/^(\/[^/]+\/)/);   // ex: /marmota-rpg.io/
+  return (match && match[1] !== "/") ? match[1] : "/";
+}
+function _url(page) {
+  return _basePath() + page;
+}
+
 /* ── Estado interno da sessão ─────────────────────────────────── */
 const _state = {
   fbUser:   null,   // Firebase Auth user object
@@ -73,11 +85,11 @@ window.RPG.waitForSession = (requireAuth = false, requireAdmin = false) => {
   return new Promise((resolve) => {
     const check = (profile) => {
       if (requireAuth && !profile) {
-        window.location.href = "index.html";
+        window.location.href = _url("index.html");
         return resolve(null);
       }
       if (requireAdmin && (!profile || profile.role !== "admin")) {
-        window.location.href = "home.html";
+        window.location.href = _url("home.html");
         return resolve(null);
       }
       resolve(profile);
@@ -135,7 +147,7 @@ window.RPG.resetPassword = async (email) => {
 /* ── Logout ───────────────────────────────────────────────────── */
 window.RPG.signOut = async () => {
   await signOut(auth);
-  window.location.href = "index.html";
+  window.location.href = _url("index.html");
 };
 
 /* ── Tradução de erros Firebase (pt-BR) ───────────────────────── */

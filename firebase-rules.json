@@ -1,7 +1,7 @@
 {
   "rules": {
     "users": {
-      ".read":  "auth !== null",
+      ".read": "auth !== null",
       "$uid": {
         ".read":  "auth !== null",
         ".write": "$uid === auth.uid || auth.uid === 'F69XMBOumJSiuBvQm3c63HyJAjy2'",
@@ -21,14 +21,12 @@
       }
     },
     "submissions": {
-      ".read":  "auth.uid === 'F69XMBOumJSiuBvQm3c63HyJAjy2'",
+      ".read":  "auth !== null",
       ".write": "auth !== null"
     },
     "rankings": {
       ".read":  "auth !== null",
-      "$uid": {
-        ".write": "$uid === auth.uid || auth.uid === 'F69XMBOumJSiuBvQm3c63HyJAjy2'"
-      }
+      ".write": "auth !== null"
     },
     "meta": {
       ".read":  "auth !== null",
