@@ -207,25 +207,17 @@ function _fillSidebar(user) {
   if (!user) return;
 
   // Avatar: iconUrl (emoji) tem prioridade sobre photoURL
+  const imgEl   = document.getElementById("sidebarAvatar");
+  const emojiEl = document.getElementById("sidebarAvatarEmoji");
+
   if (user.iconUrl) {
-    // Mostrar emoji na sidebar (substitui img por div-emoji se existir)
-    const imgEl   = document.getElementById("sidebarAvatar");
-    let emojiEl   = document.getElementById("sidebarAvatarEmoji");
-    if (!emojiEl && imgEl) {
-      // Criar elemento emoji inline ao lado da img
-      emojiEl = document.createElement("div");
-      emojiEl.id        = "sidebarAvatarEmoji";
-      emojiEl.className = "sidebar-avatar-emoji";
-      imgEl.parentNode.insertBefore(emojiEl, imgEl);
-    }
     if (imgEl)   { imgEl.style.display   = "none"; }
     if (emojiEl) { emojiEl.style.display = "flex"; emojiEl.textContent = user.iconUrl; }
   } else {
     const avatar = user.photoURL ||
       `https://ui-avatars.com/api/?name=${encodeURIComponent(user.username||"?")}&background=1a1a2e&color=c9a84c&size=80`;
-    _set("sidebarAvatar", el => { el.style.display = "block"; el.src = avatar; });
-    const emojiEl = document.getElementById("sidebarAvatarEmoji");
-    if (emojiEl) emojiEl.style.display = "none";
+    if (imgEl)   { imgEl.style.display = "block"; imgEl.src = avatar; }
+    if (emojiEl) { emojiEl.style.display = "none"; }
   }
 
   // Truncar nome para caber no layout

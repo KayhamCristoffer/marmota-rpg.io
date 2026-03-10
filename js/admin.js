@@ -51,6 +51,15 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   // Bind salvar quest
   document.getElementById("saveQuestBtn")?.addEventListener("click", _saveQuest);
+
+  // "Voltar ao Dashboard" com basePath correto (GitHub Pages)
+  document.getElementById("dashboardLink")?.addEventListener("click", e => {
+    e.preventDefault();
+    const p = window.location.pathname;
+    const m = p.match(/^(\/[^/]+\/)/);
+    const base = (m && m[1] !== "/") ? m[1] : "/";
+    window.location.href = base + "home.html";
+  });
 });
 
 /* ════════════════════════════════════════════════════════════════

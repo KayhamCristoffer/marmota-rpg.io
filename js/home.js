@@ -17,9 +17,18 @@ document.addEventListener("DOMContentLoaded", async () => {
   const user = await window.RPG.waitForSession(true);
   if (!user) return;
 
-  // Exibir link admin se for admin
+  // Exibir link admin se for admin (usando JS redirect com basePath correto)
   const adminLink = document.getElementById("adminLink");
-  if (adminLink && user.role === "admin") adminLink.style.display = "flex";
+  if (adminLink && user.role === "admin") {
+    adminLink.style.display = "flex";
+    adminLink.addEventListener("click", e => {
+      e.preventDefault();
+      const p = window.location.pathname;
+      const m = p.match(/^(\/[^/]+\/)/);
+      const base = (m && m[1] !== "/") ? m[1] : "/";
+      window.location.href = base + "admin.html";
+    });
+  }
 
   // Carregar tudo em paralelo
   await Promise.all([loadStats(), window.loadRanking?.()]);
@@ -49,7 +58,7 @@ window.loadStats = async function loadStats() {
     if (!data) return;
 
     // Sidebar
-    _fillAvatarEl("sidebarAvatar", data);
+    _fillAvatarEl("sidebarAvatar", data, "sidebarAvatarEmoji");
     _set("sidebarName",  el => el.textContent = _truncate(data.nickname || data.username, 18));
     _set("sidebarLevel", el => { if (!el.querySelector("i")) el.textContent = data.level; });
     _set("sidebarCoins", el => el.textContent = (data.coins||0).toLocaleString("pt-BR"));
@@ -167,7 +176,15 @@ function setupProfile(user) {
 /* ─── Avatar Picker: emojis de ícone ───────────────────────── */
 function _setupAvatarPicker(user) {
   const picker = document.getElementById("avatarPicker");
-  if (!picker || picker._bound) return;
+  if (!picker) return;
+
+  // Se já foi inicializado, apenas atualizar o selected
+  if (picker._bound) {
+    picker.querySelectorAll(".avatar-icon-btn").forEach(b => {
+      b.classList.toggle("selected", b.dataset.icon === user.iconUrl);
+    });
+    return;
+  }
   picker._bound = true;
 
   picker.innerHTML = AVATAR_ICONS.map(icon => `

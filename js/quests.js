@@ -57,7 +57,13 @@ window.loadQuests = async function loadQuestsPage(filter = "all") {
 
   } catch (err) {
     console.error("loadQuests error:", err);
-    grid.innerHTML = '<div class="empty-state"><i class="fas fa-exclamation-triangle"></i><h3>Erro ao carregar</h3><p>Recarregue a página</p></div>';
+    const msg = err.message || "Erro desconhecido";
+    const isPermission = msg.includes("PERMISSION_DENIED") || msg.includes("permission");
+    grid.innerHTML = `<div class="empty-state">
+      <i class="fas fa-exclamation-triangle"></i>
+      <h3>Erro ao carregar quests</h3>
+      <p>${isPermission ? "Sem permissão: atualize as regras do Firebase no Console." : msg}</p>
+    </div>`;
   }
 };
 
@@ -159,7 +165,13 @@ window.loadMyQuests = async function loadMyQuestsPage(filter = "all") {
 
   } catch (err) {
     console.error("loadMyQuests error:", err);
-    list.innerHTML = '<div class="empty-state"><i class="fas fa-exclamation-triangle"></i><h3>Erro ao carregar</h3></div>';
+    const msg = err.message || "Erro desconhecido";
+    const isPermission = msg.includes("PERMISSION_DENIED") || msg.includes("permission");
+    list.innerHTML = `<div class="empty-state">
+      <i class="fas fa-exclamation-triangle"></i>
+      <h3>Erro ao carregar suas quests</h3>
+      <p>${isPermission ? "Sem permissão: atualize as regras do Firebase no Console." : msg}</p>
+    </div>`;
   }
 };
 
