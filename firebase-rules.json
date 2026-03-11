@@ -12,7 +12,12 @@
     },
     "quests": {
       ".read":  "auth !== null",
-      ".write": "auth.uid === 'F69XMBOumJSiuBvQm3c63HyJAjy2'"
+      "$questId": {
+        ".write": "auth.uid === 'F69XMBOumJSiuBvQm3c63HyJAjy2'",
+        "currentUsers": {
+          ".write": "auth !== null"
+        }
+      }
     },
     "userQuests": {
       "$uid": {

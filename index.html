@@ -58,6 +58,15 @@
       transition:border-color .2s;
     }
     .auth-box input:focus{outline:none;border-color:var(--gold,#c9a84c);}
+    /* Password wrapper with toggle eye icon */
+    .password-wrap{position:relative;}
+    .password-wrap input{padding-right:2.6rem!important;}
+    .btn-eye{
+      position:absolute;right:.7rem;top:50%;transform:translateY(-50%);
+      background:none;border:none;color:var(--text-muted,#888);cursor:pointer;
+      font-size:1rem;padding:2px;display:flex;align-items:center;
+    }
+    .btn-eye:hover{color:#fff;}
     .auth-box .btn-auth-primary{
       width:100%;padding:.85rem;border:none;border-radius:10px;
       font-family:'Cinzel',serif;font-size:1rem;font-weight:700;
@@ -70,22 +79,6 @@
       box-shadow:0 6px 20px rgba(201,168,76,.35);
     }
     .auth-box .btn-auth-primary:disabled{opacity:.6;cursor:not-allowed;}
-    .auth-box .btn-google{
-      width:100%;padding:.75rem;border:1px solid var(--border,#2a2a3e);
-      border-radius:10px;background:var(--surface,#1a1a2e);color:#fff;
-      font-size:.9rem;cursor:pointer;transition:all .2s;
-      display:flex;align-items:center;justify-content:center;gap:10px;
-      margin-bottom:.8rem;
-    }
-    .auth-box .btn-google:hover:not(:disabled){background:#22223a;border-color:#666;}
-    .auth-box .btn-google:disabled{opacity:.6;cursor:not-allowed;}
-    .auth-divider{
-      display:flex;align-items:center;gap:8px;
-      margin:.8rem 0;color:var(--text-muted,#666);font-size:.75rem;
-    }
-    .auth-divider::before,.auth-divider::after{
-      content:'';flex:1;height:1px;background:var(--border,#2a2a3e);
-    }
     .auth-error{
       background:rgba(255,60,60,.1);border:1px solid rgba(255,80,80,.3);
       color:#ff7070;border-radius:8px;padding:.6rem .9rem;
@@ -102,17 +95,17 @@
       color:var(--text-muted,#888);cursor:pointer;font-size:1.1rem;padding:4px;
     }
     .auth-box .close-btn:hover{color:#fff;}
+    /* Remember me row */
+    .remember-row{
+      display:flex;align-items:center;justify-content:space-between;
+      margin:.5rem 0 .9rem;font-size:.8rem;color:var(--text-muted,#aaa);
+    }
+    .remember-row label{display:flex;align-items:center;gap:6px;cursor:pointer;}
+    .remember-row input[type=checkbox]{width:15px;height:15px;cursor:pointer;accent-color:var(--gold,#c9a84c);}
+    .remember-row a{color:var(--gold,#c9a84c);cursor:pointer;text-decoration:underline;font-size:.78rem;}
 
     /* ── Botões na login card ──────────────────── */
     .login-actions{display:flex;flex-direction:column;gap:.7rem;width:100%;}
-    .btn-login-google{
-      display:flex;align-items:center;justify-content:center;gap:10px;
-      padding:.85rem 1.2rem;border-radius:10px;
-      border:1px solid var(--border,#2a2a3e);
-      background:var(--surface,#1a1a2e);color:#fff;
-      font-size:.95rem;cursor:pointer;transition:all .2s;width:100%;
-    }
-    .btn-login-google:hover{background:#22223a;border-color:#888;}
     .btn-login-email{
       display:flex;align-items:center;justify-content:center;gap:8px;
       padding:.85rem 1.2rem;border-radius:10px;border:none;
@@ -132,6 +125,15 @@
     .btn-register:hover{background:rgba(201,168,76,.1);}
     .spin-icon{animation:spin .8s linear infinite;display:inline-block;}
     @keyframes spin{to{transform:rotate(360deg);}}
+
+    /* ── Timer de sessão (toast especial) ────── */
+    #sessionTimerBanner{
+      display:none;position:fixed;bottom:1rem;left:50%;transform:translateX(-50%);
+      background:rgba(201,168,76,.15);border:1px solid rgba(201,168,76,.4);
+      color:var(--gold,#c9a84c);border-radius:10px;padding:.5rem 1.2rem;
+      font-size:.82rem;z-index:9998;gap:8px;align-items:center;
+    }
+    #sessionTimerBanner.show{display:flex;}
   </style>
 </head>
 <body class="login-page">
@@ -171,17 +173,6 @@
 
       <!-- Ações de login -->
       <div class="login-actions">
-        <!-- Google -->
-        <button class="btn-login-google" id="googleBtn" type="button">
-          <svg width="20" height="20" viewBox="0 0 48 48">
-            <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
-            <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/>
-            <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/>
-            <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.18 1.48-4.97 2.35-8.16 2.35-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
-          </svg>
-          <span>Entrar com Google</span>
-        </button>
-
         <!-- E-mail login -->
         <button class="btn-login-email" id="openLoginBtn" type="button">
           <i class="fas fa-envelope"></i>
@@ -231,26 +222,27 @@
       <p class="auth-subtitle">Bem-vindo de volta, aventureiro!</p>
       <div class="auth-error" id="loginError"></div>
 
-      <!-- Google no modal de login também -->
-      <button class="btn-google" id="googleBtnModal" type="button">
-        <svg width="18" height="18" viewBox="0 0 48 48">
-          <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
-          <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/>
-          <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/>
-          <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.18 1.48-4.97 2.35-8.16 2.35-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
-        </svg>
-        Continuar com Google
-      </button>
-
-      <div class="auth-divider"><span>ou com e-mail</span></div>
-
       <div class="form-group">
         <label><i class="fas fa-envelope"></i> E-mail</label>
         <input type="email" id="loginEmail" placeholder="seu@email.com" autocomplete="email"/>
       </div>
       <div class="form-group">
         <label><i class="fas fa-lock"></i> Senha</label>
-        <input type="password" id="loginPassword" placeholder="••••••••" autocomplete="current-password"/>
+        <div class="password-wrap">
+          <input type="password" id="loginPassword" placeholder="••••••••" autocomplete="current-password"/>
+          <button class="btn-eye" type="button" id="toggleLoginPwd" title="Mostrar/Ocultar senha">
+            <i class="fas fa-eye" id="eyeLoginIcon"></i>
+          </button>
+        </div>
+      </div>
+
+      <!-- Remember me + Forgot password -->
+      <div class="remember-row">
+        <label>
+          <input type="checkbox" id="rememberMe" checked/>
+          Lembrar login (30 min)
+        </label>
+        <a id="forgotPasswordLink">Esqueci a senha</a>
       </div>
 
       <button class="btn-auth-primary" id="submitLoginBtn" type="button">
@@ -258,8 +250,7 @@
       </button>
 
       <div class="auth-switch">
-        Não tem conta? <a id="goToRegister">Cadastre-se aqui</a> ·
-        <a id="forgotPasswordLink">Esqueci a senha</a>
+        Não tem conta? <a id="goToRegister">Cadastre-se aqui</a>
       </div>
     </div>
   </div>
@@ -284,11 +275,21 @@
       </div>
       <div class="form-group">
         <label><i class="fas fa-lock"></i> Senha <small>(mín. 6 caracteres)</small></label>
-        <input type="password" id="regPassword" placeholder="••••••••" autocomplete="new-password"/>
+        <div class="password-wrap">
+          <input type="password" id="regPassword" placeholder="••••••••" autocomplete="new-password"/>
+          <button class="btn-eye" type="button" id="toggleRegPwd" title="Mostrar/Ocultar senha">
+            <i class="fas fa-eye" id="eyeRegIcon"></i>
+          </button>
+        </div>
       </div>
       <div class="form-group">
         <label><i class="fas fa-lock"></i> Confirmar Senha</label>
-        <input type="password" id="regConfirm" placeholder="••••••••" autocomplete="new-password"/>
+        <div class="password-wrap">
+          <input type="password" id="regConfirm" placeholder="••••••••" autocomplete="new-password"/>
+          <button class="btn-eye" type="button" id="toggleRegConfirm" title="Mostrar/Ocultar senha">
+            <i class="fas fa-eye" id="eyeRegConfirmIcon"></i>
+          </button>
+        </div>
       </div>
 
       <button class="btn-auth-primary" id="submitRegisterBtn" type="button">
@@ -312,11 +313,13 @@
     import { getAnalytics }                from "https://www.gstatic.com/firebasejs/12.10.0/firebase-analytics.js";
     import {
       getAuth, onAuthStateChanged,
-      signInWithPopup, GoogleAuthProvider,
       signInWithEmailAndPassword,
       createUserWithEmailAndPassword,
       updateProfile,
-      sendPasswordResetEmail
+      sendPasswordResetEmail,
+      setPersistence,
+      browserLocalPersistence,
+      browserSessionPersistence
     } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-auth.js";
     import {
       getDatabase, ref, get, set
@@ -334,6 +337,8 @@
       measurementId:     "G-V0T2VYP0LQ"
     };
     const ADMIN_UID = "F69XMBOumJSiuBvQm3c63HyJAjy2";
+    const SESSION_DURATION_MS = 30 * 60 * 1000; // 30 minutes
+    const SESSION_KEY = "rpg_session_expiry";
 
     const app  = getApps().length ? getApps()[0] : initializeApp(cfg);
     try { getAnalytics(app); } catch(_) {}
@@ -353,10 +358,55 @@
       document.getElementById("pageLoader").classList.add("hide");
     }
 
+    /* ══════════════════════════════════════════════════════
+       SESSION TIMER (30-minute auto-logout)
+    ══════════════════════════════════════════════════════ */
+    function setSessionExpiry() {
+      const expiry = Date.now() + SESSION_DURATION_MS;
+      localStorage.setItem(SESSION_KEY, expiry.toString());
+    }
+
+    function getSessionExpiry() {
+      return parseInt(localStorage.getItem(SESSION_KEY) || "0");
+    }
+
+    function clearSessionExpiry() {
+      localStorage.removeItem(SESSION_KEY);
+    }
+
+    function isSessionExpired() {
+      const expiry = getSessionExpiry();
+      return expiry > 0 && Date.now() > expiry;
+    }
+
+    // Check session expiry when tab becomes visible
+    document.addEventListener("visibilitychange", () => {
+      if (!document.hidden && isSessionExpired()) {
+        clearSessionExpiry();
+        auth.signOut().catch(() => {});
+      }
+    });
+
+    // Periodic check every minute (relevant on home page, but harmless here)
+    setInterval(() => {
+      if (isSessionExpired()) {
+        clearSessionExpiry();
+        auth.signOut().catch(() => {});
+      }
+    }, 60_000);
+
     /* ── Verificar se já está logado ─────────────────── */
     onAuthStateChanged(auth, user => {
       hideLoader();
-      if (user) goTo("home.html");
+      if (user) {
+        // Check if session has expired
+        if (isSessionExpired()) {
+          clearSessionExpiry();
+          auth.signOut();
+          return;
+        }
+        goTo("home.html");
+      }
     });
 
     /* ── Criar/Garantir perfil no DB ─────────────────── */
@@ -371,6 +421,7 @@
           username:     displayName,
           nickname:     displayName,
           photoURL:     user.photoURL || "",
+          iconUrl:      "",
           coins:        0, xp: 0, level: 1,
           role:         user.uid === ADMIN_UID ? "admin" : "user",
           badges:       [],
@@ -406,7 +457,6 @@
         "auth/wrong-password":         "Senha incorreta.",
         "auth/invalid-credential":     "E-mail ou senha incorretos.",
         "auth/too-many-requests":      "Muitas tentativas. Aguarde.",
-        "auth/popup-closed-by-user":   "Login cancelado.",
         "auth/network-request-failed": "Sem conexão. Verifique a internet."
       };
       return m[code] || "Ocorreu um erro. Tente novamente.";
@@ -427,6 +477,23 @@
       el.classList.add("show");
       setTimeout(() => el.classList.remove("show"), 5000);
     }
+
+    /* ── Show/Hide password toggle ───────────────────── */
+    function setupPasswordToggle(btnId, inputId, iconId) {
+      const btn   = document.getElementById(btnId);
+      const input = document.getElementById(inputId);
+      const icon  = document.getElementById(iconId);
+      if (!btn || !input || !icon) return;
+      btn.addEventListener("click", () => {
+        const show = input.type === "password";
+        input.type = show ? "text" : "password";
+        icon.classList.toggle("fa-eye",      !show);
+        icon.classList.toggle("fa-eye-slash", show);
+      });
+    }
+    setupPasswordToggle("toggleLoginPwd",    "loginPassword", "eyeLoginIcon");
+    setupPasswordToggle("toggleRegPwd",       "regPassword",   "eyeRegIcon");
+    setupPasswordToggle("toggleRegConfirm",   "regConfirm",    "eyeRegConfirmIcon");
 
     /* ════════════════════════════════════════════════════
        CONTROLE DE MODAIS
@@ -452,41 +519,35 @@
     });
 
     /* ════════════════════════════════════════════════════
-       LOGIN GOOGLE  (botão da landing + botão do modal)
-    ════════════════════════════════════════════════════ */
-    async function doGoogleLogin(btn) {
-      const orig = btn.innerHTML;
-      setLoading(btn, true, orig);
-      try {
-        const result = await signInWithPopup(auth, new GoogleAuthProvider());
-        await ensureProfile(result.user);
-        goTo("home.html");
-      } catch (err) {
-        setLoading(btn, false, orig);
-        if (err.code !== "auth/popup-closed-by-user") {
-          toast(fErr(err.code), "error");
-        }
-      }
-    }
-
-    document.getElementById("googleBtn")     .addEventListener("click", e => doGoogleLogin(e.currentTarget));
-    document.getElementById("googleBtnModal").addEventListener("click", e => doGoogleLogin(e.currentTarget));
-
-    /* ════════════════════════════════════════════════════
-       LOGIN E-MAIL / SENHA
+       LOGIN E-MAIL / SENHA  +  REMEMBER ME
     ════════════════════════════════════════════════════ */
     const submitLoginBtn  = document.getElementById("submitLoginBtn");
     const submitLoginHTML = submitLoginBtn.innerHTML;
 
     async function doEmailLogin() {
-      const email    = document.getElementById("loginEmail").value.trim();
-      const password = document.getElementById("loginPassword").value;
+      const email      = document.getElementById("loginEmail").value.trim();
+      const password   = document.getElementById("loginPassword").value;
+      const rememberMe = document.getElementById("rememberMe").checked;
+
       if (!email || !password) return showErr("loginError", "Preencha e-mail e senha.");
 
       setLoading(submitLoginBtn, true, submitLoginHTML);
       try {
+        // Set Firebase persistence based on remember-me choice
+        const persistence = rememberMe ? browserLocalPersistence : browserSessionPersistence;
+        await setPersistence(auth, persistence);
+
         const result = await signInWithEmailAndPassword(auth, email, password);
         await ensureProfile(result.user);
+
+        if (rememberMe) {
+          // Store session expiry (30 minutes)
+          setSessionExpiry();
+        } else {
+          // No persistent session
+          clearSessionExpiry();
+        }
+
         goTo("home.html");
       } catch (err) {
         setLoading(submitLoginBtn, false, submitLoginHTML);
@@ -533,9 +594,13 @@
 
       setLoading(submitRegBtn, true, submitRegHTML);
       try {
+        // New registrations use local persistence by default
+        await setPersistence(auth, browserLocalPersistence);
         const result = await createUserWithEmailAndPassword(auth, email, password);
         await updateProfile(result.user, { displayName: name });
         await ensureProfile(result.user, name);
+        // Set session expiry for new registrations
+        setSessionExpiry();
         goTo("home.html");
       } catch (err) {
         setLoading(submitRegBtn, false, submitRegHTML);

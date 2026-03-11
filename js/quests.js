@@ -11,6 +11,7 @@ import {
 /* ─── Estado local ──────────────────────────────────────────── */
 let _currentFilter    = "all";
 let _selectedUQId     = null;   // userQuestId selecionado para envio
+let _allLoadedQuests  = [];     // cache para busca local
 
 /* ─── Carregar quests disponíveis ───────────────────────────── */
 window.loadQuests = async function loadQuestsPage(filter = "all") {
@@ -43,12 +44,10 @@ window.loadQuests = async function loadQuestsPage(filter = "all") {
       };
     });
 
-    grid.innerHTML = questsWithStatus.map(q => _renderQuestCard(q)).join("");
+    // Cache para busca local
+    _allLoadedQuests = questsWithStatus;
 
-    // Bind botões pegar quest
-    grid.querySelectorAll('.btn-take-quest[data-action="take"]').forEach(btn => {
-      btn.addEventListener("click", () => _doTakeQuest(btn.dataset.id));
-    });
+    _renderQuestGrid(questsWithStatus, grid);
 
     // Badge de disponíveis
     const available = questsWithStatus.filter(q => !q.userStatus && q.isAvailable).length;
@@ -66,6 +65,19 @@ window.loadQuests = async function loadQuestsPage(filter = "all") {
     </div>`;
   }
 };
+
+/* ─── Render grid com bind de botões ─────────────────────────── */
+function _renderQuestGrid(questsWithStatus, grid) {
+  grid.innerHTML = questsWithStatus.length
+    ? questsWithStatus.map(q => _renderQuestCard(q)).join("")
+    : `<div class="empty-state" style="grid-column:1/-1">
+        <i class="fas fa-search"></i><h3>Nenhuma quest encontrada</h3>
+        <p>Tente outro termo de busca ou filtro.</p></div>`;
+
+  grid.querySelectorAll('.btn-take-quest[data-action="take"]').forEach(btn => {
+    btn.addEventListener("click", () => _doTakeQuest(btn.dataset.id));
+  });
+}
 
 /* ─── Render card de quest ────────────────────────────────────── */
 function _renderQuestCard(q) {
@@ -303,9 +315,8 @@ document.addEventListener("DOMContentLoaded", () => {
       const uid = window.RPG.getFbUser()?.uid;
       if (!uid) throw new Error("Não logado");
 
-      // Converter imagem para base64 e salvar URL de dados no Firebase
-      const base64  = await _fileToBase64(file);
-      const printUrl = `data:${file.type};base64,${base64}`;
+      // Comprimir imagem e converter para base64 (máx 800px, qualidade 0.75)
+      const printUrl = await _compressAndEncode(file);
 
       await submitQuestProof(uid, _selectedUQId, printUrl);
 
@@ -326,9 +337,51 @@ document.addEventListener("DOMContentLoaded", () => {
     btn.addEventListener("click", () => {
       document.querySelectorAll("#page-quests .filter-btn").forEach(b => b.classList.remove("active"));
       btn.classList.add("active");
+      // Clear search when filter changes
+      const si = document.getElementById("questSearchInput");
+      if (si) si.value = "";
+      document.getElementById("clearQuestSearch")?.style && (document.getElementById("clearQuestSearch").style.display = "none");
       window.loadQuests(btn.dataset.filter);
     });
   });
+
+  // Refresh buttons
+  document.getElementById("refreshQuestsBtn")?.addEventListener("click", () => {
+    const si = document.getElementById("questSearchInput");
+    if (si) si.value = "";
+    document.getElementById("clearQuestSearch")?.style && (document.getElementById("clearQuestSearch").style.display = "none");
+    window.loadQuests(_currentFilter);
+  });
+  document.getElementById("refreshMyQuestsBtn")?.addEventListener("click", () => window.loadMyQuests());
+  document.getElementById("refreshStatsBtn")?.addEventListener("click", () => window.loadStats?.());
+
+  // Quest search bar
+  const questSearch  = document.getElementById("questSearchInput");
+  const clearSearch  = document.getElementById("clearQuestSearch");
+  const questsGrid   = document.getElementById("questsGrid");
+  if (questSearch) {
+    questSearch.addEventListener("input", () => {
+      const q = questSearch.value.trim().toLowerCase();
+      if (clearSearch) clearSearch.style.display = q ? "flex" : "none";
+      if (!q) {
+        // Show all loaded quests
+        _renderQuestGrid(_allLoadedQuests, questsGrid);
+        return;
+      }
+      const filtered = _allLoadedQuests.filter(
+        quest => (quest.title||"").toLowerCase().includes(q) ||
+                 (quest.description||"").toLowerCase().includes(q)
+      );
+      _renderQuestGrid(filtered, questsGrid);
+    });
+  }
+  if (clearSearch) {
+    clearSearch.addEventListener("click", () => {
+      if (questSearch) questSearch.value = "";
+      clearSearch.style.display = "none";
+      _renderQuestGrid(_allLoadedQuests, questsGrid);
+    });
+  }
 
   // Filtros minhas quests
   document.querySelectorAll("#page-myquests .filter-btn").forEach(btn => {
@@ -341,6 +394,37 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 
 /* ─── Utilitários ─────────────────────────────────────────────── */
+/**
+ * Comprime a imagem para máx 800×800px, qualidade 0.75 (JPEG),
+ * e retorna string base64 prefixada (data:image/jpeg;base64,…).
+ * Reduz drasticamente o tamanho do printUrl armazenado no Firebase.
+ */
+function _compressAndEncode(file) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    const reader = new FileReader();
+    reader.onload = e => { img.src = e.target.result; };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+
+    img.onload = () => {
+      const MAX = 800;
+      let w = img.width;
+      let h = img.height;
+      if (w > MAX || h > MAX) {
+        if (w > h) { h = Math.round(h * MAX / w); w = MAX; }
+        else       { w = Math.round(w * MAX / h); h = MAX; }
+      }
+      const canvas = document.createElement("canvas");
+      canvas.width  = w;
+      canvas.height = h;
+      canvas.getContext("2d").drawImage(img, 0, 0, w, h);
+      resolve(canvas.toDataURL("image/jpeg", 0.75));
+    };
+    img.onerror = reject;
+  });
+}
+
 function _fileToBase64(file) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();

@@ -2348,3 +2348,97 @@ input, select, textarea { font-family: inherit; }
   font-size: 1.2rem;
   flex-shrink: 0;
 }
+
+/* ════════════════════════════════════════════════════════════
+   NOVOS ELEMENTOS: Refresh Button, Search Bar, Page Header
+════════════════════════════════════════════════════════════ */
+
+/* ─── Refresh button ─────────────────────────────────────── */
+.btn-refresh {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: .45rem .9rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--text-secondary);
+  font-size: .8rem;
+  cursor: pointer;
+  transition: all .2s;
+  white-space: nowrap;
+}
+.btn-refresh:hover {
+  border-color: var(--gold);
+  color: var(--gold);
+  background: rgba(201,168,76,.08);
+}
+.btn-refresh:active .fa-sync-alt,
+.btn-refresh.spinning .fa-sync-alt {
+  animation: spin .6s linear;
+}
+
+/* ─── Page header with action buttons ───────────────────── */
+.page-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: .6rem;
+  margin-bottom: 1.2rem;
+}
+
+/* ─── Search bar (quests page) ───────────────────────────── */
+.search-bar-wrap {
+  position: relative;
+  margin-bottom: 1rem;
+}
+.search-bar-wrap .search-icon {
+  position: absolute;
+  left: .9rem;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--text-muted);
+  font-size: .9rem;
+  pointer-events: none;
+}
+.search-bar-wrap input {
+  width: 100%;
+  padding: .65rem 2.8rem .65rem 2.4rem;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  font-size: .9rem;
+  box-sizing: border-box;
+  transition: border-color .2s;
+}
+.search-bar-wrap input:focus {
+  outline: none;
+  border-color: var(--gold);
+}
+.btn-clear-search {
+  position: absolute;
+  right: .7rem;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: .85rem;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+}
+.btn-clear-search:hover { color: #fff; }
+
+/* ─── Pending count badge (admin) ────────────────────────── */
+.pending-count-badge {
+  font-size: .78rem;
+  background: rgba(201,168,76,.12);
+  border: 1px solid rgba(201,168,76,.3);
+  color: var(--gold);
+  border-radius: 12px;
+  padding: 3px 10px;
+}

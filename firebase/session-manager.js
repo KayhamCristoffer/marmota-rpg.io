@@ -36,6 +36,36 @@ function _url(page) {
   return _basePath() + page;
 }
 
+/* ══════════════════════════════════════════════════════════════
+   SESSION EXPIRY (30-minute auto-logout)
+══════════════════════════════════════════════════════════════ */
+const SESSION_KEY = "rpg_session_expiry";
+
+function _isSessionExpired() {
+  const expiry = parseInt(localStorage.getItem(SESSION_KEY) || "0");
+  return expiry > 0 && Date.now() > expiry;
+}
+
+function _clearSessionExpiry() {
+  localStorage.removeItem(SESSION_KEY);
+}
+
+// Periodic check every 60s — sign out if session expired
+setInterval(() => {
+  if (_isSessionExpired()) {
+    _clearSessionExpiry();
+    signOut(auth).catch(() => {});
+  }
+}, 60_000);
+
+// Also check on tab focus
+document.addEventListener("visibilitychange", () => {
+  if (!document.hidden && _isSessionExpired()) {
+    _clearSessionExpiry();
+    signOut(auth).catch(() => {});
+  }
+});
+
 /* ── Estado interno da sessão ─────────────────────────────────── */
 const _state = {
   fbUser:   null,   // Firebase Auth user object
@@ -56,6 +86,15 @@ function _notify() {
 /* ── Listener principal ──────────────────────────────────────── */
 onAuthStateChanged(auth, async (fbUser) => {
   if (fbUser) {
+    // Check if session has expired (30-min timer)
+    if (_isSessionExpired()) {
+      _clearSessionExpiry();
+      signOut(auth);
+      _state.fbUser  = null;
+      _state.profile = null;
+      _notify();
+      return;
+    }
     _state.fbUser = fbUser;
     // Criar/buscar perfil no DB
     _state.profile = await upsertUser(fbUser.uid, {
@@ -146,6 +185,7 @@ window.RPG.resetPassword = async (email) => {
 
 /* ── Logout ───────────────────────────────────────────────────── */
 window.RPG.signOut = async () => {
+  _clearSessionExpiry();
   await signOut(auth);
   window.location.href = _url("index.html");
 };

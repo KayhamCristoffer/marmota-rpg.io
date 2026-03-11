@@ -79,7 +79,12 @@
     <section class="page active" id="page-submissions">
       <div class="page-header">
         <h2 class="page-title"><i class="fas fa-inbox"></i> Revisões Pendentes</h2>
-        <span class="pending-count-badge" id="submissionsCount">0 pendentes</span>
+        <div style="display:flex;gap:.6rem;align-items:center">
+          <span class="pending-count-badge" id="submissionsCount">0 pendentes</span>
+          <button class="btn-refresh" id="refreshSubmissionsBtn" title="Atualizar">
+            <i class="fas fa-sync-alt"></i> Atualizar
+          </button>
+        </div>
       </div>
 
       <div class="submissions-list" id="submissionsList">
@@ -91,9 +96,14 @@
     <section class="page" id="page-quests">
       <div class="page-header">
         <h2 class="page-title"><i class="fas fa-scroll"></i> Gerenciar Quests</h2>
-        <button class="btn-primary" id="createQuestBtn">
-          <i class="fas fa-plus"></i> Nova Quest
-        </button>
+        <div style="display:flex;gap:.6rem;align-items:center">
+          <button class="btn-refresh" id="refreshAdminQuestsBtn" title="Atualizar">
+            <i class="fas fa-sync-alt"></i> Atualizar
+          </button>
+          <button class="btn-primary" id="createQuestBtn">
+            <i class="fas fa-plus"></i> Nova Quest
+          </button>
+        </div>
       </div>
 
       <div class="admin-quests-list" id="adminQuestsList">
@@ -105,6 +115,9 @@
     <section class="page" id="page-users">
       <div class="page-header">
         <h2 class="page-title"><i class="fas fa-users"></i> Usuários</h2>
+        <button class="btn-refresh" id="refreshUsersBtn" title="Atualizar">
+          <i class="fas fa-sync-alt"></i> Atualizar
+        </button>
       </div>
 
       <div class="search-bar">

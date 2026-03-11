@@ -109,6 +109,9 @@
     <section class="page active" id="page-stats">
       <div class="page-header">
         <h2 class="page-title"><i class="fas fa-chart-bar"></i> Estatísticas</h2>
+        <button class="btn-refresh" id="refreshStatsBtn" title="Atualizar estatísticas">
+          <i class="fas fa-sync-alt"></i> Atualizar
+        </button>
       </div>
 
       <div class="stats-grid">
@@ -201,6 +204,18 @@
     <section class="page" id="page-quests">
       <div class="page-header">
         <h2 class="page-title"><i class="fas fa-scroll"></i> Pegar Quests</h2>
+        <button class="btn-refresh" id="refreshQuestsBtn" title="Atualizar lista">
+          <i class="fas fa-sync-alt"></i> Atualizar
+        </button>
+      </div>
+
+      <!-- Barra de busca -->
+      <div class="search-bar-wrap">
+        <i class="fas fa-search search-icon"></i>
+        <input type="text" id="questSearchInput" placeholder="Buscar quest por nome…" autocomplete="off"/>
+        <button class="btn-clear-search" id="clearQuestSearch" title="Limpar busca" style="display:none">
+          <i class="fas fa-times"></i>
+        </button>
       </div>
 
       <!-- Filtros -->
@@ -221,6 +236,9 @@
     <section class="page" id="page-myquests">
       <div class="page-header">
         <h2 class="page-title"><i class="fas fa-list-check"></i> Minhas Quests</h2>
+        <button class="btn-refresh" id="refreshMyQuestsBtn" title="Atualizar lista">
+          <i class="fas fa-sync-alt"></i> Atualizar
+        </button>
       </div>
 
       <div class="filter-bar">

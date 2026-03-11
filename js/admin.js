@@ -45,6 +45,11 @@ document.addEventListener("DOMContentLoaded", async () => {
   // Bind criar quest
   document.getElementById("createQuestBtn")?.addEventListener("click", () => openQuestModal(null));
 
+  // Refresh buttons
+  document.getElementById("refreshSubmissionsBtn")?.addEventListener("click", loadSubmissions);
+  document.getElementById("refreshAdminQuestsBtn")?.addEventListener("click", loadAdminQuests);
+  document.getElementById("refreshUsersBtn")?.addEventListener("click", loadUsers);
+
   // Bind fechar modais de quest
   document.getElementById("closeQuestModal") ?.addEventListener("click", _closeQuestModal);
   document.getElementById("cancelQuestModal")?.addEventListener("click", _closeQuestModal);
