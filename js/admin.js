@@ -5,14 +5,11 @@
 import "../firebase/session-manager.js";
 import {
   getAllUsers, updateUserRole,
-  getQuests, createQuest, updateQuest, toggleQuest, deleteQuest,
+  proc_getAllQuests,
+  createQuest, updateQuest, toggleQuest, deleteQuest,
   getPendingSubmissions, approveSubmission, rejectSubmission,
   resetRanking, snapToArray
 } from "../firebase/database.js";
-import { db } from "../firebase/services-config.js";
-import {
-  ref, get
-} from "../firebase/services-config.js";
 
 /* ════════════════════════════════════════════════════════════════
    INICIALIZAÇÃO
@@ -204,9 +201,8 @@ async function loadAdminQuests() {
   list.innerHTML = '<div class="loading-spinner"><i class="fas fa-spinner fa-spin"></i> Carregando...</div>';
 
   try {
-    // Buscar TODAS as quests do Firebase (sem filtro de isActive)
-    const snap   = await get(ref(db, "quests"));
-    const quests = snapToArray(snap).sort((a, b) => (b.created_at||0) - (a.created_at||0));
+    // Buscar TODAS as quests (ativas e inativas) via proc_getAllQuests
+    const quests = await proc_getAllQuests();
 
     if (quests.length === 0) {
       list.innerHTML = `<div class="empty-state">

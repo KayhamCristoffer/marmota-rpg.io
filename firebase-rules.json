@@ -3,7 +3,6 @@
     "users": {
       ".read": "auth !== null",
       "$uid": {
-        ".read":  "auth !== null",
         ".write": "$uid === auth.uid || auth.uid === 'F69XMBOumJSiuBvQm3c63HyJAjy2'",
         "role": {
           ".write": "auth.uid === 'F69XMBOumJSiuBvQm3c63HyJAjy2'"
@@ -11,7 +10,7 @@
       }
     },
     "quests": {
-      ".read":  "auth !== null",
+      ".read": "auth !== null",
       "$questId": {
         ".write": "auth.uid === 'F69XMBOumJSiuBvQm3c63HyJAjy2'",
         "currentUsers": {

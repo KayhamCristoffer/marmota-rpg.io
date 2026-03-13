@@ -2442,3 +2442,15 @@ input, select, textarea { font-family: inherit; }
   border-radius: 12px;
   padding: 3px 10px;
 }
+
+/* ─── Quest retry button (rejeitada, pode tentar de novo) ──── */
+.btn-take-quest.retry {
+  background: linear-gradient(135deg, rgba(249,115,22,.2), rgba(249,115,22,.1));
+  border: 1px solid rgba(249,115,22,.5);
+  color: var(--orange, #f97316);
+  cursor: pointer;
+}
+.btn-take-quest.retry:hover {
+  background: rgba(249,115,22,.3);
+  transform: translateY(-1px);
+}

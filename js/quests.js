@@ -35,12 +35,23 @@ window.loadQuests = async function loadQuestsPage(filter = "all") {
     }
 
     // Mapear status do usuário para cada quest
+    // ⚠️ Um usuário pode ter MÚLTIPLAS entradas para o mesmo questId
+    //    (após rejeição pode pegar de novo). Usamos a MAIS RECENTE.
+    const latestByQuestId = {};
+    myUQs.forEach(uq => {
+      const prev = latestByQuestId[uq.questId];
+      if (!prev || (uq.takenAt || 0) > (prev.takenAt || 0)) {
+        latestByQuestId[uq.questId] = uq;
+      }
+    });
+
     const questsWithStatus = quests.map(q => {
-      const uq = myUQs.find(x => x.questId === q.id);
+      const uq = latestByQuestId[q.id] || null;
       return {
         ...q,
-        userStatus:  uq?.status || null,
-        isAvailable: !q.maxUsers || (q.currentUsers || 0) < q.maxUsers
+        userStatus:    uq?.status || null,
+        userQuestId:   uq?.id     || null,
+        isAvailable:   !q.maxUsers || (q.currentUsers || 0) < q.maxUsers
       };
     });
 
@@ -49,8 +60,10 @@ window.loadQuests = async function loadQuestsPage(filter = "all") {
 
     _renderQuestGrid(questsWithStatus, grid);
 
-    // Badge de disponíveis
-    const available = questsWithStatus.filter(q => !q.userStatus && q.isAvailable).length;
+    // Badge de disponíveis: quests que o usuário pode pegar agora
+    // (sem status, ou status=rejected = pode tentar de novo)
+    const canTake = q => (!q.userStatus || q.userStatus === "rejected") && q.isAvailable;
+    const available = questsWithStatus.filter(canTake).length;
     const badge = document.getElementById("availableBadge");
     if (badge) badge.textContent = available > 0 ? available : "";
 
@@ -74,6 +87,7 @@ function _renderQuestGrid(questsWithStatus, grid) {
         <i class="fas fa-search"></i><h3>Nenhuma quest encontrada</h3>
         <p>Tente outro termo de busca ou filtro.</p></div>`;
 
+  // Bind both normal take and retry buttons
   grid.querySelectorAll('.btn-take-quest[data-action="take"]').forEach(btn => {
     btn.addEventListener("click", () => _doTakeQuest(btn.dataset.id));
   });
@@ -96,8 +110,11 @@ function _renderQuestCard(q) {
     btnHtml = `<button class="btn-take-quest pending" disabled>⏳ Em análise</button>`;
   else if (q.userStatus === "completed")
     btnHtml = `<button class="btn-take-quest completed" disabled>✅ Concluída</button>`;
-  else if (q.userStatus === "rejected")
-    btnHtml = `<button class="btn-take-quest taken" disabled>❌ Rejeitada</button>`;
+  else if (q.userStatus === "rejected" && q.isAvailable)
+    // Rejeitada → pode tentar de novo
+    btnHtml = `<button class="btn-take-quest retry" data-action="take" data-id="${q.id}">🔄 Tentar Novamente</button>`;
+  else if (q.userStatus === "rejected" && !q.isAvailable)
+    btnHtml = `<button class="btn-take-quest taken" disabled>❌ Rejeitada / Esgotada</button>`;
   else if (!q.isAvailable)
     btnHtml = `<button class="btn-take-quest taken" disabled>🔒 Esgotada</button>`;
   else
@@ -152,7 +169,20 @@ window.loadMyQuests = async function loadMyQuestsPage(filter = "all") {
       list.innerHTML = '<div class="empty-state"><i class="fas fa-lock"></i><h3>Faça login para ver suas quests</h3></div>';
       return;
     }
-    let myQuests = await getUserQuests(uid);
+    const allUQs = await getUserQuests(uid);
+
+    // Para cada questId, mostrar apenas a entrada MAIS RECENTE
+    // (evita mostrar entradas antigas rejeitadas junto com a nova ativa)
+    const latestByQuestId = {};
+    allUQs.forEach(uq => {
+      const prev = latestByQuestId[uq.questId];
+      if (!prev || (uq.takenAt || 0) > (prev.takenAt || 0)) {
+        latestByQuestId[uq.questId] = uq;
+      }
+    });
+    let myQuests = Object.values(latestByQuestId)
+      .sort((a, b) => (b.takenAt || 0) - (a.takenAt || 0)); // mais recentes primeiro
+
     if (filter !== "all") myQuests = myQuests.filter(q => q.status === filter);
 
     if (myQuests.length === 0) {
