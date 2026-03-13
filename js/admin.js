@@ -219,8 +219,11 @@ async function loadAdminQuests() {
       event:   "⭐ Evento"
     };
 
-    list.innerHTML = quests.map(q => `
-      <div class="admin-quest-item ${q.isActive ? "" : "inactive"}" id="aq-${q.id}">
+    list.innerHTML = quests.map(q => {
+      // Compatibilidade legado: undefined/null/true = ativa; false = inativa
+      const isActive = q.isActive !== false;
+      return `
+      <div class="admin-quest-item ${isActive ? "" : "inactive"}" id="aq-${q.id}">
         <div class="admin-quest-info">
           <div class="admin-quest-title">${escapeHtml(q.title)}</div>
           <div class="admin-quest-meta">
@@ -228,8 +231,8 @@ async function loadAdminQuests() {
             <span><i class="fas fa-coins"></i> ${q.rewardCoins||0} moedas</span>
             ${(q.rewardXP||0)>0 ? `<span><i class="fas fa-star"></i> ${q.rewardXP} XP</span>` : ""}
             <span><i class="fas fa-users"></i> ${q.currentUsers||0}${q.maxUsers ? `/${q.maxUsers}` : ""}</span>
-            <span style="color:${q.isActive ? "var(--green)" : "var(--red)"}">
-              ${q.isActive ? "● Ativa" : "● Inativa"}
+            <span style="color:${isActive ? "var(--green)" : "var(--red)"}">
+              ${isActive ? "● Ativa" : "● Inativa"}
             </span>
             ${q.expiresAt
               ? `<span style="color:var(--text-muted)">Expira: ${new Date(q.expiresAt).toLocaleDateString("pt-BR")}</span>`
@@ -238,12 +241,13 @@ async function loadAdminQuests() {
         </div>
         <div class="admin-quest-actions">
           <button class="btn-edit-quest"   data-id="${q.id}"><i class="fas fa-edit"></i> Editar</button>
-          <button class="btn-toggle-quest ${q.isActive ? "deactivate" : ""}" data-id="${q.id}">
-            <i class="fas fa-${q.isActive ? "pause" : "play"}"></i> ${q.isActive ? "Desativar" : "Ativar"}
+          <button class="btn-toggle-quest ${isActive ? "deactivate" : ""}" data-id="${q.id}">
+            <i class="fas fa-${isActive ? "pause" : "play"}"></i> ${isActive ? "Desativar" : "Ativar"}
           </button>
           <button class="btn-delete-quest" data-id="${q.id}"><i class="fas fa-trash"></i></button>
         </div>
-      </div>`).join("");
+      </div>`;
+    }).join("");
 
     // Guardar quests para uso no modal de edição
     _allQuests = quests;

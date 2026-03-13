@@ -198,11 +198,11 @@ window.loadMyQuests = async function loadMyQuestsPage(filter = "all") {
       btn.addEventListener("click", () => _openSubmitModal(btn.dataset.id, btn.dataset.title));
     });
 
-    // Atualizar badge de ativas
+    // Atualizar badge de ativas + em análise
     const pendingBadge = document.getElementById("pendingBadge");
     if (pendingBadge) {
-      const active = myQuests.filter(q => q.status === "active").length;
-      pendingBadge.textContent = active > 0 ? active : "";
+      const count = myQuests.filter(q => q.status === "active" || q.status === "pending_review").length;
+      pendingBadge.textContent = count > 0 ? count : "";
     }
 
   } catch (err) {

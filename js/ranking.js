@@ -41,16 +41,18 @@ window.loadRanking = async function loadRankingPage(period = "total") {
     const posIcons = { 1:"🥇", 2:"🥈", 3:"🥉" };
     list.innerHTML = ranking.map(r => {
       const isMe  = r.uid === uid;
-      const photo = r.photoURL || r.avatar ||
-        `https://ui-avatars.com/api/?name=${encodeURIComponent(r.nickname||r.username||"?")}&background=1a1a2e&color=c9a84c`;
+      const avatarHtml = r.iconUrl
+        ? `<div class="ranking-avatar-emoji">${r.iconUrl}</div>`
+        : `<img src="${r.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(r.nickname||r.username||"?")}&background=1a1a2e&color=c9a84c`}"
+               alt="${escapeHtml(r.nickname||r.username)}"
+               class="ranking-avatar"
+               onerror="this.src='https://ui-avatars.com/api/?name=?&background=1a1a2e&color=c9a84c'"/>`;
       return `
       <div class="ranking-item ${isMe ? "is-me" : ""}">
         <span class="rank-position rank-pos-${r.position}">
           ${r.position <= 3 ? posIcons[r.position] : `#${r.position}`}
         </span>
-        <img src="${photo}" alt="${escapeHtml(r.nickname||r.username)}"
-             class="ranking-avatar"
-             onerror="this.src='https://ui-avatars.com/api/?name=?&background=1a1a2e&color=c9a84c'"/>
+        ${avatarHtml}
         <span class="ranking-name">
           ${escapeHtml(r.nickname || r.username || "Aventureiro")}
           ${isMe ? '<span style="color:var(--gold);font-size:.7rem;margin-left:4px">(você)</span>' : ""}
@@ -85,16 +87,18 @@ window.loadRanking = async function loadRankingPage(period = "total") {
 };
 
 function renderPodiumItem(user, currentUid) {
-  const photo = user.photoURL || user.avatar ||
-    `https://ui-avatars.com/api/?name=${encodeURIComponent(user.nickname||"?")}&background=1a1a2e&color=c9a84c`;
   const labels = { 1:"🥇", 2:"🥈", 3:"🥉" };
   const isMe   = user.uid === currentUid;
+  const avatarHtml = user.iconUrl
+    ? `<div class="podium-avatar-emoji">${user.iconUrl}</div>`
+    : `<img src="${user.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.nickname||"?")}&background=1a1a2e&color=c9a84c`}"
+           alt="${escapeHtml(user.nickname||user.username)}"
+           class="podium-avatar"
+           onerror="this.src='https://ui-avatars.com/api/?name=?&background=1a1a2e&color=c9a84c'"/>`;
 
   return `
     <div class="podium-item pos-${user.position} ${isMe ? "is-me" : ""}">
-      <img src="${photo}" alt="${escapeHtml(user.nickname||user.username)}"
-           class="podium-avatar"
-           onerror="this.src='https://ui-avatars.com/api/?name=?&background=1a1a2e&color=c9a84c'"/>
+      ${avatarHtml}
       <span class="podium-name" title="${escapeHtml(user.nickname||user.username)}">
         ${escapeHtml(user.nickname || user.username || "?")}
       </span>
@@ -117,6 +121,12 @@ document.addEventListener("DOMContentLoaded", () => {
       btn.classList.add("active");
       window.loadRanking(btn.dataset.period);
     });
+  });
+
+  // Refresh button
+  document.getElementById("refreshRankingBtn")?.addEventListener("click", () => {
+    const activePeriod = rankingPage.querySelector(".filter-btn[data-period].active")?.dataset.period || "total";
+    window.loadRanking(activePeriod);
   });
 });
 

@@ -209,15 +209,18 @@ export async function proc_getAllQuests() {
 }
 
 /**
- * proc_getActiveQuests – retorna apenas quests com isActive !== false.
+ * proc_getActiveQuests – retorna apenas quests ativas.
  * Filtro opcional por type ('daily', 'weekly', 'monthly', 'event').
  * Usado pela tela de "Pegar Quests".
+ *
+ * Regra: quest é ativa quando isActive é true, undefined, null ou qualquer
+ * valor que não seja explicitamente false.
+ * (Compatibilidade com dados legados que podem não ter o campo isActive.)
  */
 export async function proc_getActiveQuests(type = null) {
   const all = await proc_getAllQuests();
-  // isActive pode ser true, undefined (legado) ou false
-  // Consideramos ativa quando isActive é true OU está ausente (legado)
-  let active = all.filter(q => q.isActive === true || q.isActive === undefined);
+  // Só exclui quests que tenham isActive === false explicitamente
+  let active = all.filter(q => q.isActive !== false);
   if (type) active = active.filter(q => q.type === type);
   return active;
 }
@@ -272,11 +275,15 @@ export async function proc_updateQuest(questId, data) {
 /**
  * proc_toggleQuest – alterna isActive de uma quest (admin).
  * Retorna o novo valor de isActive.
+ * Trata legado: se isActive era undefined/null/true → desativa (false);
+ * se era false → ativa (true).
  */
 export async function proc_toggleQuest(questId) {
   const quest = await proc_getQuest(questId);
   if (!quest) throw new Error("Quest não encontrada");
-  const newActive = !quest.isActive;
+  // Considera "ativa" qualquer valor !== false (inclui undefined, null, true)
+  const isCurrentlyActive = quest.isActive !== false;
+  const newActive = !isCurrentlyActive;
   await update(ref(db, `quests/${questId}`), { isActive: newActive });
   return newActive;
 }
@@ -516,19 +523,43 @@ export async function proc_updateRankingEntry(uid, total, daily, weekly, monthly
 }
 
 /**
- * proc_getRanking – retorna ranking ordenado por período.
+ * proc_getRanking – retorna ranking ordenado por período, enriquecido
+ * com dados do perfil (nickname, photoURL, iconUrl, level, badges).
  * @param {string} period  "total" | "daily" | "weekly" | "monthly"
  * @param {number} limit   Máximo de entradas (padrão: 50)
  */
 export async function proc_getRanking(period = "total", limit = 50) {
-  const snap    = await get(ref(db, "rankings"));
-  const entries = snapToArray(snap);
-  const field   = { total: "coinsTotal", daily: "coinsDaily",
-                    weekly: "coinsWeekly", monthly: "coinsMonthly" }[period] || "coinsTotal";
+  const [rankSnap, usersSnap] = await Promise.all([
+    get(ref(db, "rankings")),
+    get(ref(db, "users"))
+  ]);
+  const entries  = snapToArray(rankSnap);
+  const usersArr = snapToArray(usersSnap);
+
+  // Mapa uid → perfil de usuário
+  const userMap = {};
+  usersArr.forEach(u => { userMap[u.uid || u.id] = u; });
+
+  const field = { total: "coinsTotal", daily: "coinsDaily",
+                  weekly: "coinsWeekly", monthly: "coinsMonthly" }[period] || "coinsTotal";
+
   return entries
     .sort((a, b) => (b[field] || 0) - (a[field] || 0))
     .slice(0, limit)
-    .map((e, i) => ({ ...e, position: i + 1, coins: e[field] || 0 }));
+    .map((e, i) => {
+      const u = userMap[e.uid] || {};
+      return {
+        ...e,
+        position:  i + 1,
+        coins:     e[field] || 0,
+        nickname:  u.nickname  || u.username || "Aventureiro",
+        username:  u.username  || "Aventureiro",
+        photoURL:  u.photoURL  || "",
+        iconUrl:   u.iconUrl   || "",
+        level:     u.level     || 1,
+        badges:    u.badges    || []
+      };
+    });
 }
 
 /**
