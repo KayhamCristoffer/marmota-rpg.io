@@ -1,14 +1,23 @@
 /* ================================================================
    js/ranking.js  –  Ranking (100% Firebase, sem backend)
+   ----------------------------------------------------------------
+   • Usa listenRanking (onValue) para atualização em tempo real.
+   • Carrega TODOS os usuários sem limite fixo.
+   • Mostra posição do usuário logado mesmo fora do top.
    ================================================================ */
 
 import "../firebase/session-manager.js";
-import { getRanking } from "../firebase/database.js";
+import { listenRanking } from "../firebase/database.js";
+
+/* ─── Listener ativo ────────────────────────────────────────── */
+let _unsubRanking  = null;
+let _currentPeriod = "total";
 
 /* ════════════════════════════════════════════════════════════════
-   Carregar ranking
+   Carregar ranking – tempo real
 ════════════════════════════════════════════════════════════════ */
-window.loadRanking = async function loadRankingPage(period = "total") {
+window.loadRanking = function loadRankingPage(period = "total") {
+  _currentPeriod = period;
   const podium = document.getElementById("rankingPodium");
   const list   = document.getElementById("rankingList");
   if (!list) return;
@@ -16,18 +25,21 @@ window.loadRanking = async function loadRankingPage(period = "total") {
   list.innerHTML = '<div class="loading-spinner"><i class="fas fa-spinner fa-spin"></i> Carregando ranking...</div>';
   if (podium) podium.innerHTML = "";
 
-  try {
-    const uid     = window.RPG.getFbUser()?.uid;
-    const ranking = await getRanking(period, 50);
+  /* Cancelar listener anterior */
+  if (_unsubRanking) { _unsubRanking(); _unsubRanking = null; }
+
+  _unsubRanking = listenRanking(period, (ranking) => {
+    const uid = window.RPG?.getFbUser()?.uid;
 
     if (!ranking || ranking.length === 0) {
+      if (podium) podium.innerHTML = "";
       list.innerHTML = `<div class="empty-state">
         <i class="fas fa-trophy"></i><h3>Ranking vazio</h3>
         <p>Seja o primeiro a completar uma quest!</p></div>`;
       return;
     }
 
-    // Pódio top 3
+    /* Pódio top 3 */
     if (podium) {
       const top3  = ranking.slice(0, 3);
       const order = [1, 0, 2]; // visual: 2º, 1º, 3º
@@ -37,16 +49,25 @@ window.loadRanking = async function loadRankingPage(period = "total") {
         .join("");
     }
 
-    // Lista completa
+    /* Lista completa – TODOS os itens */
     const posIcons = { 1:"🥇", 2:"🥈", 3:"🥉" };
+
+    /* Badges dinâmicos: mapear IDs de conquistas para ícones */
     list.innerHTML = ranking.map(r => {
       const isMe  = r.uid === uid;
       const avatarHtml = r.iconUrl
-        ? `<div class="ranking-avatar-emoji">${r.iconUrl}</div>`
+        ? `<div class="ranking-avatar-emoji">${escapeHtml(r.iconUrl)}</div>`
         : `<img src="${r.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(r.nickname||r.username||"?")}&background=1a1a2e&color=c9a84c`}"
                alt="${escapeHtml(r.nickname||r.username)}"
                class="ranking-avatar"
                onerror="this.src='https://ui-avatars.com/api/?name=?&background=1a1a2e&color=c9a84c'"/>`;
+
+      const badgesHtml = Array.isArray(r.badges) && r.badges.length > 0
+        ? r.badges.slice(0, 3).map(b =>
+            `<span class="rank-badge" title="Conquista">${typeof b === "string" && b.length <= 3 ? b : "🏆"}</span>`
+          ).join("")
+        : "";
+
       return `
       <div class="ranking-item ${isMe ? "is-me" : ""}">
         <span class="rank-position rank-pos-${r.position}">
@@ -56,8 +77,7 @@ window.loadRanking = async function loadRankingPage(period = "total") {
         <span class="ranking-name">
           ${escapeHtml(r.nickname || r.username || "Aventureiro")}
           ${isMe ? '<span style="color:var(--gold);font-size:.7rem;margin-left:4px">(você)</span>' : ""}
-          ${r.badges?.includes("diamond") ? "<span title='Diamante'>💎</span>" : ""}
-          ${r.badges?.includes("gold") && !r.badges?.includes("diamond") ? "<span title='Ouro'>🥇</span>" : ""}
+          ${badgesHtml}
         </span>
         <span class="ranking-level">Nv.${r.level||1}</span>
         <span class="ranking-coins">
@@ -67,30 +87,25 @@ window.loadRanking = async function loadRankingPage(period = "total") {
       </div>`;
     }).join("");
 
-    // Minha posição se não aparecer na lista
-    const myPos = ranking.find(r => r.uid === uid);
-    if (!myPos && uid) {
-      const allRanking = await getRanking(period, 1000);
-      const pos = allRanking.findIndex(r => r.uid === uid);
-      if (pos !== -1) {
+    /* Minha posição se não aparecer na lista visível */
+    if (uid) {
+      const myEntry = ranking.find(r => r.uid === uid);
+      if (!myEntry) {
         const note = document.createElement("div");
         note.style.cssText = "text-align:center;padding:12px;color:var(--text-secondary);font-size:.8rem;border-top:1px solid var(--border);margin-top:8px;";
-        note.textContent = `Sua posição: #${pos + 1}`;
+        note.textContent = "Você ainda não está no ranking. Complete quests para aparecer!";
         list.appendChild(note);
       }
     }
-
-  } catch (err) {
-    console.error("loadRanking error:", err);
-    list.innerHTML = '<div class="empty-state"><i class="fas fa-exclamation-triangle"></i><h3>Erro ao carregar ranking</h3></div>';
-  }
+  });
 };
 
+/* ── Pódio ───────────────────────────────────────────────────── */
 function renderPodiumItem(user, currentUid) {
   const labels = { 1:"🥇", 2:"🥈", 3:"🥉" };
   const isMe   = user.uid === currentUid;
   const avatarHtml = user.iconUrl
-    ? `<div class="podium-avatar-emoji">${user.iconUrl}</div>`
+    ? `<div class="podium-avatar-emoji">${escapeHtml(user.iconUrl)}</div>`
     : `<img src="${user.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.nickname||"?")}&background=1a1a2e&color=c9a84c`}"
            alt="${escapeHtml(user.nickname||user.username)}"
            class="podium-avatar"
@@ -123,7 +138,7 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   });
 
-  // Refresh button
+  /* Refresh força re-assinatura */
   document.getElementById("refreshRankingBtn")?.addEventListener("click", () => {
     const activePeriod = rankingPage.querySelector(".filter-btn[data-period].active")?.dataset.period || "total";
     window.loadRanking(activePeriod);
@@ -133,6 +148,6 @@ document.addEventListener("DOMContentLoaded", () => {
 function escapeHtml(text) {
   if (!text) return "";
   const d = document.createElement("div");
-  d.appendChild(document.createTextNode(text));
+  d.appendChild(document.createTextNode(String(text)));
   return d.innerHTML;
 }
