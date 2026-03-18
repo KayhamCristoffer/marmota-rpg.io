@@ -159,9 +159,20 @@ function loadSubmissions() {
         </div>
         <div class="submission-actions">
           ${s.printUrl
-            ? `<button class="btn-secondary btn-view-print" data-url="${s.printUrl}"
-                 style="font-size:.78rem;padding:6px 12px">
-                 <i class="fas fa-image"></i> Ver Print</button>`
+            ? _isPrintLink(s.printUrl)
+              ? `<div class="print-link-view">
+                   <a href="${s.printUrl}" target="_blank" rel="noopener">
+                     <i class="fas fa-external-link-alt"></i> Ver Print
+                   </a>
+                   <button class="btn-secondary btn-view-print" data-url="${s.printUrl}"
+                     style="font-size:.78rem;padding:6px 12px">
+                     <i class="fas fa-eye"></i> Preview
+                   </button>
+                 </div>`
+              : `<button class="btn-secondary btn-view-print" data-url="${s.printUrl}"
+                   style="font-size:.78rem;padding:6px 12px">
+                   <i class="fas fa-image"></i> Ver Print
+                 </button>`
             : `<span style="color:var(--text-muted);font-size:.75rem">Sem print</span>`}
           <button class="btn-approve" data-id="${s.id}">
             <i class="fas fa-check"></i> Aprovar</button>
@@ -205,11 +216,60 @@ async function doReject(id) {
 }
 
 function viewPrint(url) {
-  const modal = document.getElementById("printModal");
-  const img   = document.getElementById("printModalImg");
-  if (!modal || !img) return;
-  img.src = url;
-  modal.style.display = "flex";
+  if (!url) return;
+
+  // Se for um link direto (prnt.sc, gyazo, etc.) — tenta mostrar no modal
+  if (_isPrintLink(url)) {
+    const modal = document.getElementById("printModal");
+    const img   = document.getElementById("printModalImg");
+    if (!modal || !img) { window.open(url, "_blank", "noopener"); return; }
+    // Tenta carregar a imagem diretamente
+    const directUrl = _getAdminDirectImageUrl(url);
+    if (directUrl) {
+      img.src = directUrl;
+      img.onerror = () => {
+        // Fallback: abre no novo tab
+        modal.style.display = "none";
+        window.open(url, "_blank", "noopener");
+      };
+    } else {
+      // prnt.sc não tem CDN público direto — abre no link
+      window.open(url, "_blank", "noopener");
+      return;
+    }
+    modal.style.display = "flex";
+  } else {
+    // Base64 legado
+    const modal = document.getElementById("printModal");
+    const img   = document.getElementById("printModalImg");
+    if (!modal || !img) return;
+    img.src = url;
+    modal.style.display = "flex";
+  }
+}
+
+/** Verifica se é um link de print externo (não base64) */
+function _isPrintLink(url) {
+  if (!url) return false;
+  return url.startsWith("http://") || url.startsWith("https://");
+}
+
+/** Tenta obter URL direta da imagem para preview no modal */
+function _getAdminDirectImageUrl(url) {
+  try {
+    const u    = new URL(url);
+    const host = u.hostname.toLowerCase();
+    if (host === "gyazo.com") {
+      const id = u.pathname.replace(/^\//, "").split(".")[0];
+      return `https://i.gyazo.com/${id}.png`;
+    }
+    if (host === "imgur.com") {
+      const id = u.pathname.replace(/^\//, "").split(".")[0];
+      return `https://i.imgur.com/${id}.png`;
+    }
+    if (host === "i.imgur.com" || host === "i.ibb.co") return url;
+    return null; // prnt.sc, lightshot — sem CDN direto público
+  } catch { return null; }
 }
 
 /* ════════════════════════════════════════════════════════════════

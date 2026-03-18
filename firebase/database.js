@@ -346,8 +346,18 @@ export async function proc_takeQuest(uid, questId) {
       throw new Error("Você já está fazendo esta quest! Envie o comprovante em Minhas Quests.");
     if (existing.status === "pending_review")
       throw new Error("Seu comprovante está em análise. Aguarde a revisão.");
-    if (existing.status === "completed")
-      throw new Error("Você já completou esta quest. Cada quest pode ser feita apenas 1 vez.");
+
+    if (existing.status === "completed") {
+      // Verifica se o cooldown do período passou
+      const cooldownOver = _isCooldownOver(existing);
+      if (!cooldownOver) {
+        const nextReset = _getNextReset(existing.questType || quest.type);
+        const label = { daily: "meia-noite", weekly: "domingo", monthly: "dia 1 do mês" }[quest.type] || "o próximo reset";
+        throw new Error(`Você já completou esta quest! Ela reinicia em ${label}.`);
+      }
+      // Cooldown passou — cria nova entrada
+    }
+
     if (existing.status === "rejected") {
       await update(ref(db, `userQuests/${uid}/${existing.id}`), {
         status: "active", printUrl: null, reviewNote: null, takenAt: now()
@@ -385,6 +395,41 @@ export async function proc_takeQuest(uid, questId) {
   const newCount = (quest.currentUsers || 0) + 1;
   await update(ref(db, `quests/${questId}`), { currentUsers: newCount });
   return { id: uqRef.key };
+}
+
+/* ─── Cooldown helpers (espelho de quests.js para server-side) ─ */
+function _getNextReset(questType) {
+  const d = new Date();
+  if (questType === "daily") {
+    const r = new Date(d); r.setDate(r.getDate() + 1); r.setHours(0,0,0,0); return r.getTime();
+  } else if (questType === "weekly") {
+    const r = new Date(d);
+    const dow = r.getDay();
+    const days = dow === 0 ? 7 : 7 - dow;
+    r.setDate(r.getDate() + days); r.setHours(0,0,0,0); return r.getTime();
+  } else if (questType === "monthly") {
+    return new Date(d.getFullYear(), d.getMonth() + 1, 1, 0, 0, 0, 0).getTime();
+  }
+  return null;
+}
+
+function _isCooldownOver(uq) {
+  if (!uq || uq.status !== "completed") return false;
+  const completedAt = uq.completedAt || uq.takenAt || 0;
+  const questType   = uq.questType   || "event";
+  if (questType === "event") return false;
+  const completedDate = new Date(completedAt);
+  let reset;
+  if (questType === "daily") {
+    reset = new Date(completedDate); reset.setDate(reset.getDate() + 1); reset.setHours(0,0,0,0);
+  } else if (questType === "weekly") {
+    reset = new Date(completedDate);
+    const dow = reset.getDay(); const days = dow === 0 ? 7 : 7 - dow;
+    reset.setDate(reset.getDate() + days); reset.setHours(0,0,0,0);
+  } else if (questType === "monthly") {
+    reset = new Date(completedDate.getFullYear(), completedDate.getMonth() + 1, 1, 0,0,0,0);
+  }
+  return reset ? Date.now() >= reset.getTime() : false;
 }
 
 /* ════════════════════════════════════════════════════════════════
@@ -467,7 +512,7 @@ export async function proc_approveSubmission(submissionId, adminUid) {
     status: "approved", reviewedBy: adminUid, reviewedAt: now()
   });
   await update(ref(db, `userQuests/${subVal.uid}/${subVal.userQuestId}`), {
-    status: "completed", reviewNote: null
+    status: "completed", reviewNote: null, completedAt: now()
   });
   await proc_awardUser(subVal.uid, subVal.rewardCoins || 0, subVal.rewardXP || 0);
 }
