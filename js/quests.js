@@ -1,16 +1,18 @@
 /* ================================================================
-   js/quests.js  –  Pegar quests + Minhas Quests
+   js/quests.js  –  Pegar quests + Minhas Quests  v6.0
    ----------------------------------------------------------------
-   • Cada quest pode ser feita 1x por usuário.
-   • Quests concluídas não podem ser repetidas.
-   • Quests rejeitadas: mesmo botão reativa a entrada para reenvio.
-   • "Minhas Quests" exibe TODAS as entradas (sem deduplicar).
-   • Usa onValue (tempo real) para atualização automática das listas.
+   • Comprovante via LINK (prnt.sc) em vez de upload de imagem.
+   • Quests concluídas mostram COUNTDOWN até o próximo reset:
+       - Diária  → meia-noite do próximo dia
+       - Semanal → domingo meia-noite
+       - Mensal  → dia 1 do próximo mês 00:00
+   • Após o reset, botão volta a "Pegar Quest".
+   • Usa onValue (tempo real) para atualização automática.
    ================================================================ */
 
 import "../firebase/session-manager.js";
 import {
-  getQuests, getUserQuests, takeQuest as fbTakeQuest,
+  getUserQuests, takeQuest as fbTakeQuest,
   submitQuestProof,
   listenQuests, listenUserQuests
 } from "../firebase/database.js";
@@ -19,10 +21,128 @@ import {
 let _currentQuestFilter   = "all";
 let _currentMyQuestFilter = "all";
 let _selectedUQId         = null;
-let _allLoadedQuests      = [];   // cache para busca/filtro client-side
-let _unsubQuests          = null; // unsubscribe listener quests
-let _unsubUserQuests      = null; // unsubscribe listener user-quests
-let _allUserQuests        = [];   // cache user-quests para merge
+let _allLoadedQuests      = [];
+let _unsubQuests          = null;
+let _unsubUserQuests      = null;
+let _allUserQuests        = [];
+
+/* ════════════════════════════════════════════════════════════════
+   COOLDOWN HELPERS
+════════════════════════════════════════════════════════════════ */
+
+/**
+ * Calcula o próximo timestamp de reset para cada tipo de quest.
+ * Retorna milliseconds (Unix) do próximo reset.
+ */
+function _getNextReset(questType) {
+  const now = new Date();
+  let reset;
+
+  if (questType === "daily") {
+    // Próxima meia-noite (horário local)
+    reset = new Date(now);
+    reset.setDate(reset.getDate() + 1);
+    reset.setHours(0, 0, 0, 0);
+
+  } else if (questType === "weekly") {
+    // Próximo domingo às 00:00
+    reset = new Date(now);
+    const dayOfWeek = reset.getDay(); // 0=Sun, 1=Mon...
+    const daysUntilSunday = dayOfWeek === 0 ? 7 : 7 - dayOfWeek;
+    reset.setDate(reset.getDate() + daysUntilSunday);
+    reset.setHours(0, 0, 0, 0);
+
+  } else if (questType === "monthly") {
+    // Dia 1 do próximo mês às 00:00
+    reset = new Date(now.getFullYear(), now.getMonth() + 1, 1, 0, 0, 0, 0);
+
+  } else {
+    // Eventos não têm reset automático
+    return null;
+  }
+
+  return reset.getTime();
+}
+
+/**
+ * Verifica se uma quest completada já passou do seu cooldown.
+ * @param {object} uq - userQuest com .questType e .completedAt
+ * @returns {boolean} true se o cooldown já passou (pode refazer)
+ */
+function _isCooldownOver(uq) {
+  if (!uq || uq.status !== "completed") return false;
+  const completedAt = uq.completedAt || uq.takenAt || 0;
+  const questType   = uq.questType   || "event";
+
+  if (questType === "event") return false; // eventos nunca resetam
+
+  // Calcula o reset que ocorreu APÓS completedAt
+  const completedDate = new Date(completedAt);
+  let reset;
+
+  if (questType === "daily") {
+    // Reset = meia-noite do dia seguinte ao completedAt
+    reset = new Date(completedDate);
+    reset.setDate(reset.getDate() + 1);
+    reset.setHours(0, 0, 0, 0);
+
+  } else if (questType === "weekly") {
+    // Reset = próximo domingo após completedAt
+    reset = new Date(completedDate);
+    const dow = reset.getDay();
+    const daysUntilSunday = dow === 0 ? 7 : 7 - dow;
+    reset.setDate(reset.getDate() + daysUntilSunday);
+    reset.setHours(0, 0, 0, 0);
+
+  } else if (questType === "monthly") {
+    // Reset = dia 1 do mês seguinte ao completedAt
+    reset = new Date(completedDate.getFullYear(), completedDate.getMonth() + 1, 1, 0, 0, 0, 0);
+  }
+
+  return reset ? Date.now() >= reset.getTime() : false;
+}
+
+/**
+ * Formata o tempo restante até o próximo reset em string legível.
+ */
+function _formatCountdown(ms) {
+  if (ms <= 0) return "Reiniciando...";
+  const totalSec = Math.floor(ms / 1000);
+  const days     = Math.floor(totalSec / 86400);
+  const hours    = Math.floor((totalSec % 86400) / 3600);
+  const mins     = Math.floor((totalSec % 3600)  / 60);
+  const secs     = totalSec % 60;
+
+  if (days > 0)  return `${days}d ${String(hours).padStart(2,"0")}h ${String(mins).padStart(2,"0")}m`;
+  if (hours > 0) return `${String(hours).padStart(2,"0")}h ${String(mins).padStart(2,"0")}m ${String(secs).padStart(2,"0")}s`;
+  return `${String(mins).padStart(2,"0")}m ${String(secs).padStart(2,"0")}s`;
+}
+
+/* Intervalo global para atualizar countdowns na tela */
+let _countdownInterval = null;
+
+function _startCountdownTick() {
+  if (_countdownInterval) clearInterval(_countdownInterval);
+  _countdownInterval = setInterval(() => {
+    document.querySelectorAll("[data-reset-at]").forEach(el => {
+      const resetAt  = parseInt(el.dataset.resetAt, 10);
+      const remaining = resetAt - Date.now();
+      if (remaining <= 0) {
+        // Cooldown acabou — recarrega a lista
+        clearInterval(_countdownInterval);
+        _countdownInterval = null;
+        if (_unsubQuests || _unsubUserQuests) {
+          // Os listeners onValue vão atualizar automaticamente
+          // mas forçamos re-render com o cache
+          const grid = document.getElementById("questsGrid");
+          if (grid) _renderFromCache(grid);
+        }
+      } else {
+        el.textContent = _formatCountdown(remaining);
+      }
+    });
+  }, 1000);
+}
 
 /* ════════════════════════════════════════════════════════════════
    PEGAR QUESTS  –  carrega TODAS as quests ativas (tempo real)
@@ -37,26 +157,20 @@ window.loadQuests = async function loadQuestsPage(filter) {
 
   const uid = window.RPG?.getFbUser()?.uid;
 
-  // Cancelar listener anterior se existir
-  if (_unsubQuests) { _unsubQuests(); _unsubQuests = null; }
+  if (_unsubQuests)     { _unsubQuests();     _unsubQuests = null; }
   if (_unsubUserQuests) { _unsubUserQuests(); _unsubUserQuests = null; }
 
-  /* Carrega user-quests uma vez (será atualizado por listener) */
   if (uid) {
     _allUserQuests = await getUserQuests(uid).catch(() => []);
-    // Listener em tempo real para user-quests
     _unsubUserQuests = listenUserQuests(uid, (uqs) => {
       _allUserQuests = uqs;
       _renderFromCache(grid);
     });
   }
 
-  /* Listener em tempo real para quests */
   _unsubQuests = listenQuests((allQuests) => {
-    // Filtrar por tipo se necessário
-    const type = _currentQuestFilter !== "all" ? _currentQuestFilter : null;
+    const type   = _currentQuestFilter !== "all" ? _currentQuestFilter : null;
     const quests = type ? allQuests.filter(q => q.type === type) : allQuests;
-    // Apenas quests ativas para usuários
     const active = quests.filter(q => q.isActive !== false);
 
     if (active.length === 0) {
@@ -69,34 +183,33 @@ window.loadQuests = async function loadQuestsPage(filter) {
       return;
     }
 
-    /* Mapeia questId → entrada do usuário */
-    const uqByQuestId = {};
-    _allUserQuests.forEach(uq => {
-      if (!uqByQuestId[uq.questId] || (uq.takenAt || 0) > (uqByQuestId[uq.questId].takenAt || 0)) {
-        uqByQuestId[uq.questId] = uq;
-      }
-    });
+    // Mapeia questId → entrada mais recente do usuário
+    const uqByQuestId = _buildUqMap(_allUserQuests);
 
     const questsWithStatus = active.map(q => {
       const uq = uqByQuestId[q.id] || null;
+      // Verifica se o cooldown já passou para quests concluídas
+      const cooldownOver = uq ? _isCooldownOver(uq) : false;
       return {
         ...q,
-        userStatus:  uq?.status || null,
-        userQuestId: uq?.id     || null,
-        isAvailable: !q.maxUsers || (q.currentUsers || 0) < q.maxUsers
+        userStatus:    cooldownOver ? null : (uq?.status || null),
+        userQuestId:   uq?.id        || null,
+        completedAt:   uq?.completedAt || null,
+        questType:     q.type,
+        isAvailable:   !q.maxUsers || (q.currentUsers || 0) < q.maxUsers
       };
     });
 
     _allLoadedQuests = questsWithStatus;
     _renderQuestGrid(questsWithStatus, grid);
 
-    /* Badge: quests disponíveis para pegar */
-    const canTake = q => (!q.userStatus || q.userStatus === "rejected") && q.isAvailable;
+    const canTake  = q => (!q.userStatus || q.userStatus === "rejected") && q.isAvailable;
     const available = questsWithStatus.filter(canTake).length;
     _set("availableBadge", el => el.textContent = available > 0 ? available : "");
+
+    _startCountdownTick();
   });
 
-  // Error handler
   window.addEventListener("unhandledrejection", e => {
     if (e.reason?.message?.includes("PERMISSION_DENIED")) {
       grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1">
@@ -107,22 +220,31 @@ window.loadQuests = async function loadQuestsPage(filter) {
   }, { once: true });
 };
 
-/** Re-renderiza a grid com o cache atual (chamado quando userQuests muda) */
+function _buildUqMap(allUserQuests) {
+  const map = {};
+  allUserQuests.forEach(uq => {
+    const prev = map[uq.questId];
+    if (!prev || (uq.takenAt || 0) > (prev.takenAt || 0)) map[uq.questId] = uq;
+  });
+  return map;
+}
+
 function _renderFromCache(grid) {
   if (!_allLoadedQuests.length) return;
-  const uqByQuestId = {};
-  _allUserQuests.forEach(uq => {
-    if (!uqByQuestId[uq.questId] || (uq.takenAt || 0) > (uqByQuestId[uq.questId].takenAt || 0)) {
-      uqByQuestId[uq.questId] = uq;
-    }
+  const uqByQuestId = _buildUqMap(_allUserQuests);
+  const updated = _allLoadedQuests.map(q => {
+    const uq = uqByQuestId[q.id] || null;
+    const cooldownOver = uq ? _isCooldownOver(uq) : false;
+    return {
+      ...q,
+      userStatus:  cooldownOver ? null : (uq?.status || null),
+      userQuestId: uq?.id       || null,
+      completedAt: uq?.completedAt || null,
+    };
   });
-  const updated = _allLoadedQuests.map(q => ({
-    ...q,
-    userStatus:  (uqByQuestId[q.id] || null)?.status || null,
-    userQuestId: (uqByQuestId[q.id] || null)?.id     || null,
-  }));
   _allLoadedQuests = updated;
   _renderQuestGrid(updated, grid);
+  _startCountdownTick();
 }
 
 /* ─── Render grid de quests ─────────────────────────────────── */
@@ -155,24 +277,56 @@ function _renderQuestCard(q) {
   const typeInfo = typeLabels[q.type] || { label: q.type || "Quest", css: "" };
 
   let btnHtml = "";
-  if (q.userStatus === "active")
+
+  if (q.userStatus === "active") {
     btnHtml = `<button class="btn-take-quest taken" disabled>📜 Em progresso</button>`;
-  else if (q.userStatus === "pending_review")
+
+  } else if (q.userStatus === "pending_review") {
     btnHtml = `<button class="btn-take-quest pending" disabled>⏳ Em análise</button>`;
-  else if (q.userStatus === "completed")
-    btnHtml = `<button class="btn-take-quest completed" disabled>✅ Concluída</button>`;
-  else if (q.userStatus === "rejected" && q.isAvailable)
+
+  } else if (q.userStatus === "completed") {
+    // Mostra countdown até o próximo reset
+    const resetAt = _getNextReset(q.type);
+    if (!resetAt) {
+      // Evento — sem reset
+      btnHtml = `<button class="btn-take-quest completed" disabled>✅ Concluída</button>`;
+    } else {
+      const remaining = resetAt - Date.now();
+      const countdownText = _formatCountdown(remaining);
+      const resetLabel = {
+        daily:   "Reinicia à meia-noite",
+        weekly:  "Reinicia domingo",
+        monthly: "Reinicia dia 1"
+      }[q.type] || "Reinicia em breve";
+
+      btnHtml = `
+        <div class="quest-cooldown-wrap">
+          <div class="quest-cooldown-label">
+            <i class="fas fa-check-circle" style="color:var(--green)"></i>
+            Concluída — ${resetLabel}
+          </div>
+          <div class="quest-countdown" data-reset-at="${resetAt}">
+            ${countdownText}
+          </div>
+        </div>`;
+    }
+
+  } else if (q.userStatus === "rejected" && q.isAvailable) {
     btnHtml = `<button class="btn-take-quest retry"
                  data-action="resubmit"
                  data-uqid="${q.userQuestId}"
                  data-title="${escapeHtml(q.title)}">
                  🔄 Reenviar Print</button>`;
-  else if (q.userStatus === "rejected" && !q.isAvailable)
+
+  } else if (q.userStatus === "rejected" && !q.isAvailable) {
     btnHtml = `<button class="btn-take-quest taken" disabled>❌ Rejeitada / Esgotada</button>`;
-  else if (!q.isAvailable)
+
+  } else if (!q.isAvailable) {
     btnHtml = `<button class="btn-take-quest taken" disabled>🔒 Esgotada</button>`;
-  else
+
+  } else {
     btnHtml = `<button class="btn-take-quest" data-action="take" data-id="${q.id}">⚔️ Pegar Quest</button>`;
+  }
 
   return `
     <div class="quest-card" data-type="${q.type}" data-id="${q.id}">
@@ -201,7 +355,6 @@ async function _doTakeQuest(questId) {
     if (!uid) throw new Error("Não logado");
     await fbTakeQuest(uid, questId);
     window.showToast?.("🗡️ Quest aceita! Complete a missão!", "success");
-    // O listener onValue vai atualizar automaticamente as listas
   } catch (err) {
     window.showToast?.(err.message || "Erro ao pegar quest", "error");
     if (btn) { btn.disabled = false; btn.innerHTML = "⚔️ Pegar Quest"; }
@@ -229,22 +382,16 @@ window.loadMyQuests = async function loadMyQuestsPage(filter) {
     return;
   }
 
-  // Cancelar listener anterior
   if (_unsubMyQuests) { _unsubMyQuests(); _unsubMyQuests = null; }
 
-  /* Listener em tempo real para as quests do usuário */
   _unsubMyQuests = listenUserQuests(uid, (allUQs) => {
-    // Atualizar cache compartilhado
     _allUserQuests = allUQs;
 
-    /* Ordenar por takenAt decrescente */
     const sorted = [...allUQs].sort((a, b) => (b.takenAt || 0) - (a.takenAt || 0));
 
-    /* Atualizar badge: ativas + em análise */
     const badgeCount = sorted.filter(q => q.status === "active" || q.status === "pending_review").length;
     _set("pendingBadge", el => el.textContent = badgeCount > 0 ? badgeCount : "");
 
-    /* Filtrar por status */
     const filtered = _currentMyQuestFilter !== "all"
       ? sorted.filter(q => q.status === _currentMyQuestFilter)
       : sorted;
@@ -286,18 +433,33 @@ function _renderMyQuestItem(uq) {
     btn = `<button class="btn-submit-quest"
               data-id="${uq.id}"
               data-title="${escapeHtml(uq.questTitle || "")}">
-              <i class="fas fa-upload"></i> Enviar Print</button>`;
+              <i class="fas fa-link"></i> Enviar Link</button>`;
   } else if (uq.status === "pending_review") {
     btn = `<button class="btn-submit-quest pending" disabled>
               <i class="fas fa-clock"></i> Aguardando</button>`;
   } else if (uq.status === "completed") {
-    btn = `<button class="btn-submit-quest done" disabled>
-              <i class="fas fa-check"></i> +${uq.rewardCoins || 0} moedas</button>`;
+    // Mostra próximo reset no item de Minhas Quests
+    const resetAt = _getNextReset(uq.questType);
+    let resetInfo = "";
+    if (resetAt && uq.questType !== "event") {
+      const remaining = resetAt - Date.now();
+      const label = { daily: "Reinicia à meia-noite", weekly: "Reinicia domingo", monthly: "Reinicia dia 1" }[uq.questType] || "";
+      resetInfo = `<span class="my-quest-reset" title="${label}">
+        <i class="fas fa-redo"></i>
+        <span data-reset-at="${resetAt}">${_formatCountdown(remaining)}</span>
+      </span>`;
+    }
+    btn = `<div class="my-quest-completed-wrap">
+              <button class="btn-submit-quest done" disabled>
+                <i class="fas fa-check"></i> +${uq.rewardCoins || 0} moedas
+              </button>
+              ${resetInfo}
+           </div>`;
   } else if (uq.status === "rejected") {
     btn = `<button class="btn-submit-quest"
               data-id="${uq.id}"
               data-title="${escapeHtml(uq.questTitle || "")}">
-              <i class="fas fa-redo"></i> Reenviar Print</button>`;
+              <i class="fas fa-redo"></i> Reenviar Link</button>`;
   }
 
   return `
@@ -327,7 +489,7 @@ function _renderMyQuestItem(uq) {
 }
 
 /* ════════════════════════════════════════════════════════════════
-   MODAL DE ENVIO DE PRINT
+   MODAL DE ENVIO DE LINK (prnt.sc)
 ════════════════════════════════════════════════════════════════ */
 function _openSubmitModal(userQuestId, questTitle) {
   _selectedUQId = userQuestId;
@@ -335,12 +497,17 @@ function _openSubmitModal(userQuestId, questTitle) {
   if (!modal) return;
   modal.style.display = "flex";
   _set("submitQuestTitle", el => el.textContent = `Quest: ${questTitle}`);
-  const preview = document.getElementById("imagePreview");
-  const upload  = document.getElementById("uploadArea");
-  const input   = document.getElementById("printInput");
-  if (preview) preview.style.display = "none";
-  if (upload)  upload.style.display  = "block";
-  if (input)   input.value           = "";
+
+  // Limpa campos
+  const linkInput    = document.getElementById("printLinkInput");
+  const previewWrap  = document.getElementById("linkPreviewWrap");
+  const imagePreview = document.getElementById("imagePreview");
+  const validMsg     = document.getElementById("linkValidationMsg");
+
+  if (linkInput)    linkInput.value           = "";
+  if (previewWrap)  previewWrap.style.display = "none";
+  if (imagePreview) imagePreview.style.display = "none";
+  if (validMsg)     validMsg.textContent       = "";
 }
 
 /* ════════════════════════════════════════════════════════════════
@@ -359,60 +526,68 @@ document.addEventListener("DOMContentLoaded", () => {
   document.getElementById("cancelSubmitBtn")  ?.addEventListener("click", closeMdl);
   submitModal.addEventListener("click", e => { if (e.target === submitModal) closeMdl(); });
 
-  /* ── Upload / drag-drop ─────────────────────────────────── */
-  const uploadArea   = document.getElementById("uploadArea");
-  const printInput   = document.getElementById("printInput");
+  /* ── Link input — preview ao digitar ───────────────────── */
+  const linkInput    = document.getElementById("printLinkInput");
+  const previewWrap  = document.getElementById("linkPreviewWrap");
+  const previewOpen  = document.getElementById("linkPreviewOpen");
+  const previewStatus = document.getElementById("linkPreviewStatus");
   const imagePreview = document.getElementById("imagePreview");
   const previewImg   = document.getElementById("previewImg");
-  const removeBtn    = document.getElementById("removeImgBtn");
+  const validMsg     = document.getElementById("linkValidationMsg");
 
-  uploadArea?.addEventListener("click",    () => printInput?.click());
-  uploadArea?.addEventListener("dragover", e  => { e.preventDefault(); uploadArea.classList.add("drag-over"); });
-  uploadArea?.addEventListener("dragleave", () => uploadArea.classList.remove("drag-over"));
-  uploadArea?.addEventListener("drop",     e  => {
-    e.preventDefault(); uploadArea.classList.remove("drag-over");
-    if (e.dataTransfer.files[0]) _handleFile(e.dataTransfer.files[0]);
+  linkInput?.addEventListener("input", () => {
+    const val = linkInput.value.trim();
+    if (!val) {
+      if (previewWrap)  previewWrap.style.display  = "none";
+      if (imagePreview) imagePreview.style.display = "none";
+      if (validMsg)     validMsg.textContent        = "";
+      return;
+    }
+    const isValid = _isValidPrintLink(val);
+    if (isValid) {
+      if (validMsg) { validMsg.textContent = ""; validMsg.className = "link-validation-msg"; }
+      if (previewWrap) {
+        previewWrap.style.display = "flex";
+        if (previewOpen)  previewOpen.href = val;
+        if (previewStatus) previewStatus.textContent = "✅ Link válido";
+      }
+      // Tenta mostrar preview da imagem (prnt.sc suporta imagem direta)
+      const imgUrl = _getDirectImageUrl(val);
+      if (imgUrl && imagePreview && previewImg) {
+        previewImg.src = imgUrl;
+        imagePreview.style.display = "block";
+        previewImg.onerror = () => { imagePreview.style.display = "none"; };
+      }
+    } else {
+      if (previewWrap) previewWrap.style.display = "none";
+      if (imagePreview) imagePreview.style.display = "none";
+      if (validMsg) {
+        validMsg.textContent  = "⚠️ Use um link do prnt.sc (ex: https://prnt.sc/abc123)";
+        validMsg.className    = "link-validation-msg invalid";
+      }
+    }
   });
-  printInput?.addEventListener("change", e => { if (e.target.files[0]) _handleFile(e.target.files[0]); });
-  removeBtn?.addEventListener("click", () => {
-    if (printInput)   printInput.value           = "";
-    if (imagePreview) imagePreview.style.display = "none";
-    if (uploadArea)   uploadArea.style.display   = "block";
-    if (previewImg)   previewImg.src             = "";
-  });
 
-  function _handleFile(file) {
-    if (!file.type.startsWith("image/"))
-      return window.showToast?.("Apenas imagens são permitidas!", "error");
-    if (file.size > 5 * 1024 * 1024)
-      return window.showToast?.("Imagem muito grande (máx. 5MB)", "error");
-    const reader = new FileReader();
-    reader.onload = e => {
-      if (previewImg)   previewImg.src             = e.target.result;
-      if (imagePreview) imagePreview.style.display = "block";
-      if (uploadArea)   uploadArea.style.display   = "none";
-    };
-    reader.readAsDataURL(file);
-  }
-
-  /* ── Enviar comprovante ─────────────────────────────────── */
+  /* ── Enviar comprovante (link) ──────────────────────────── */
   const confirmBtn  = document.getElementById("confirmSubmitBtn");
   const confirmHTML = confirmBtn?.innerHTML || "Enviar";
+
   confirmBtn?.addEventListener("click", async () => {
     if (!_selectedUQId) return;
-    const file = printInput?.files[0];
-    if (!file) return window.showToast?.("Selecione uma imagem como comprovante!", "warning");
+    const link = linkInput?.value.trim();
+    if (!link)
+      return window.showToast?.("Cole o link do seu print do prnt.sc!", "warning");
+    if (!_isValidPrintLink(link))
+      return window.showToast?.("Link inválido! Use um link do prnt.sc (https://prnt.sc/...)", "warning");
 
     confirmBtn.disabled = true;
     confirmBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Enviando...';
     try {
       const uid = window.RPG?.getFbUser()?.uid;
       if (!uid) throw new Error("Não logado");
-      const printUrl = await _compressAndEncode(file);
-      await submitQuestProof(uid, _selectedUQId, printUrl);
+      await submitQuestProof(uid, _selectedUQId, link);
       window.showToast?.("✅ Comprovante enviado! Aguardando revisão. ⏳", "success");
       closeMdl();
-      // Listeners onValue vão atualizar automaticamente
       if (typeof window.loadStats === "function") await window.loadStats();
     } catch (err) {
       window.showToast?.(err.message || "Erro ao enviar comprovante", "error");
@@ -427,7 +602,7 @@ document.addEventListener("DOMContentLoaded", () => {
       document.querySelectorAll("#page-quests .filter-btn").forEach(b => b.classList.remove("active"));
       btn.classList.add("active");
       const si = document.getElementById("questSearchInput");
-      if (si) { si.value = ""; }
+      if (si) si.value = "";
       _set("clearQuestSearch", el => el.style.display = "none");
       window.loadQuests(btn.dataset.filter);
     });
@@ -449,6 +624,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const questSearch = document.getElementById("questSearchInput");
   const clearSearch = document.getElementById("clearQuestSearch");
   const questsGrid  = document.getElementById("questsGrid");
+
   questSearch?.addEventListener("input", () => {
     const q = questSearch.value.trim().toLowerCase();
     if (clearSearch) clearSearch.style.display = q ? "flex" : "none";
@@ -458,11 +634,13 @@ document.addEventListener("DOMContentLoaded", () => {
           (quest.title || "").toLowerCase().includes(q) ||
           (quest.description || "").toLowerCase().includes(q));
     _renderQuestGrid(filtered, questsGrid);
+    _startCountdownTick();
   });
   clearSearch?.addEventListener("click", () => {
     if (questSearch) questSearch.value = "";
     if (clearSearch) clearSearch.style.display = "none";
     _renderQuestGrid(_allLoadedQuests, questsGrid);
+    _startCountdownTick();
   });
 
   /* ── Filtros: Minhas Quests ─────────────────────────────── */
@@ -471,7 +649,6 @@ document.addEventListener("DOMContentLoaded", () => {
       document.querySelectorAll("#page-myquests .filter-btn").forEach(b => b.classList.remove("active"));
       btn.classList.add("active");
       _currentMyQuestFilter = btn.dataset.filter;
-      // Re-filtra do cache em memória sem nova requisição
       const list = document.getElementById("myQuestsList");
       if (!list) return;
       const filtered = _currentMyQuestFilter !== "all"
@@ -494,28 +671,55 @@ document.addEventListener("DOMContentLoaded", () => {
 /* ════════════════════════════════════════════════════════════════
    UTILITÁRIOS
 ════════════════════════════════════════════════════════════════ */
-function _compressAndEncode(file) {
-  return new Promise((resolve, reject) => {
-    const img    = new Image();
-    const reader = new FileReader();
-    reader.onload  = e => { img.src = e.target.result; };
-    reader.onerror = reject;
-    reader.readAsDataURL(file);
-    img.onload = () => {
-      const MAX = 800;
-      let w = img.width, h = img.height;
-      if (w > MAX || h > MAX) {
-        if (w > h) { h = Math.round(h * MAX / w); w = MAX; }
-        else       { w = Math.round(w * MAX / h); h = MAX; }
-      }
-      const canvas = document.createElement("canvas");
-      canvas.width  = w;
-      canvas.height = h;
-      canvas.getContext("2d").drawImage(img, 0, 0, w, h);
-      resolve(canvas.toDataURL("image/jpeg", 0.75));
-    };
-    img.onerror = reject;
-  });
+
+/**
+ * Valida se o link é do prnt.sc ou lightshot.
+ */
+function _isValidPrintLink(url) {
+  if (!url) return false;
+  try {
+    const u = new URL(url);
+    const host = u.hostname.toLowerCase();
+    // Aceita prnt.sc, i.imgur.com, imgur.com, gyazo.com, ibb.co, lightshot.app
+    return (
+      host === "prnt.sc" ||
+      host.endsWith(".prnt.sc") ||
+      host === "i.imgur.com" ||
+      host === "imgur.com" ||
+      host === "gyazo.com" ||
+      host === "ibb.co" ||
+      host === "i.ibb.co" ||
+      host === "lightshot.app" ||
+      host.endsWith(".lightshot.app")
+    );
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Tenta obter URL direta da imagem para preview.
+ * prnt.sc não tem CDN direto fácil, mas gyazo e imgur sim.
+ */
+function _getDirectImageUrl(url) {
+  try {
+    const u = new URL(url);
+    const host = u.hostname.toLowerCase();
+    // Gyazo: https://gyazo.com/abc → https://i.gyazo.com/abc.png
+    if (host === "gyazo.com") {
+      const id = u.pathname.replace(/^\//, "").split(".")[0];
+      return `https://i.gyazo.com/${id}.png`;
+    }
+    // Imgur: https://imgur.com/abc → https://i.imgur.com/abc.png
+    if (host === "imgur.com") {
+      const id = u.pathname.replace(/^\//, "").split(".")[0];
+      return `https://i.imgur.com/${id}.png`;
+    }
+    if (host === "i.imgur.com" || host === "i.ibb.co") return url;
+    return null; // prnt.sc não tem CDN direto público
+  } catch {
+    return null;
+  }
 }
 
 function _set(id, fn) {
