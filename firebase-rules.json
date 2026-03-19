@@ -1,40 +1,52 @@
 {
   "rules": {
+
     "users": {
       ".read": "auth !== null",
       "$uid": {
-        ".write": "$uid === auth.uid || auth.uid === 'F69XMBOumJSiuBvQm3c63HyJAjy2'",
+        ".write": "$uid === auth.uid || auth.uid === 'F69XMBOumJSiuBvQm3c63HyJAjy2' || root.child('users').child(auth.uid).child('role').val() === 'admin'",
         "role": {
-          ".write": "auth.uid === 'F69XMBOumJSiuBvQm3c63HyJAjy2'"
+          ".write": "auth.uid === 'F69XMBOumJSiuBvQm3c63HyJAjy2' || root.child('users').child(auth.uid).child('role').val() === 'admin'"
         }
       }
     },
+
     "quests": {
       ".read": "auth !== null",
       "$questId": {
-        ".write": "auth.uid === 'F69XMBOumJSiuBvQm3c63HyJAjy2'",
+        ".write": "auth.uid === 'F69XMBOumJSiuBvQm3c63HyJAjy2' || root.child('users').child(auth.uid).child('role').val() === 'admin'",
         "currentUsers": {
           ".write": "auth !== null"
         }
       }
     },
+
     "userQuests": {
       "$uid": {
-        ".read":  "$uid === auth.uid || auth.uid === 'F69XMBOumJSiuBvQm3c63HyJAjy2'",
-        ".write": "$uid === auth.uid || auth.uid === 'F69XMBOumJSiuBvQm3c63HyJAjy2'"
+        ".read":  "$uid === auth.uid || auth.uid === 'F69XMBOumJSiuBvQm3c63HyJAjy2' || root.child('users').child(auth.uid).child('role').val() === 'admin'",
+        ".write": "$uid === auth.uid || auth.uid === 'F69XMBOumJSiuBvQm3c63HyJAjy2' || root.child('users').child(auth.uid).child('role').val() === 'admin'"
       }
     },
+
     "submissions": {
       ".read":  "auth !== null",
       ".write": "auth !== null"
     },
+
+    "achievements": {
+      ".read":  "auth !== null",
+      ".write": "auth.uid === 'F69XMBOumJSiuBvQm3c63HyJAjy2' || root.child('users').child(auth.uid).child('role').val() === 'admin'"
+    },
+
     "rankings": {
       ".read":  "auth !== null",
       ".write": "auth !== null"
     },
+
     "meta": {
       ".read":  "auth !== null",
-      ".write": "auth.uid === 'F69XMBOumJSiuBvQm3c63HyJAjy2'"
+      ".write": "auth.uid === 'F69XMBOumJSiuBvQm3c63HyJAjy2' || root.child('users').child(auth.uid).child('role').val() === 'admin'"
     }
+
   }
 }

@@ -539,8 +539,128 @@ export async function proc_rejectSubmission(submissionId, adminUid, note = "") {
 /* ════════════════════════════════════════════════════════════════
    §6  ACHIEVEMENTS
    /achievements/{id}: name, icon, description, level,
-                        questsRequired, xpBonus, coinsBonus
+                        questsRequired, xpBonus, coinsBonus,
+                        category (quests|level|coins|event|special)
 ════════════════════════════════════════════════════════════════ */
+
+/**
+ * Conquistas padrão do sistema.
+ * Serão criadas automaticamente se o banco não tiver nenhuma.
+ */
+export const DEFAULT_ACHIEVEMENTS = [
+  /* ── PRIMEIROS PASSOS ──────────────────────────────────────── */
+  { name: "Primeiros Passos",    icon: "🐾", category: "quests",
+    description: "Complete sua primeira quest e entre para a história!",
+    level: 1, questsRequired: 1,  xpBonus: 50,   coinsBonus: 10 },
+
+  { name: "Aprendiz",            icon: "📚", category: "quests",
+    description: "Complete 5 quests e mostre que você está comprometido.",
+    level: 1, questsRequired: 5,  xpBonus: 100,  coinsBonus: 25 },
+
+  { name: "Aventureiro",         icon: "⚔️", category: "quests",
+    description: "Complete 10 quests — a aventura está apenas começando!",
+    level: 2, questsRequired: 10, xpBonus: 200,  coinsBonus: 50 },
+
+  /* ── PROGRESSÃO DE QUESTS ──────────────────────────────────── */
+  { name: "Guerreiro",           icon: "🗡️", category: "quests",
+    description: "Complete 25 quests e prove seu valor em batalha.",
+    level: 3, questsRequired: 25, xpBonus: 350,  coinsBonus: 100 },
+
+  { name: "Veterano",            icon: "🛡️", category: "quests",
+    description: "50 quests concluídas — você é um verdadeiro veterano!",
+    level: 5, questsRequired: 50, xpBonus: 500,  coinsBonus: 200 },
+
+  { name: "Elite",               icon: "💎", category: "quests",
+    description: "100 quests concluídas. Você está entre os melhores!",
+    level: 7, questsRequired: 100, xpBonus: 800, coinsBonus: 350 },
+
+  { name: "Lendário",            icon: "🌟", category: "quests",
+    description: "250 quests concluídas. Sua lenda é conhecida em toda a terra!",
+    level: 10, questsRequired: 250, xpBonus: 1500, coinsBonus: 600 },
+
+  { name: "Imortal",             icon: "👑", category: "quests",
+    description: "500 quests concluídas. Nenhum mortal chegou tão longe.",
+    level: 15, questsRequired: 500, xpBonus: 3000, coinsBonus: 1000 },
+
+  /* ── PROGRESSÃO DE NÍVEL ───────────────────────────────────── */
+  { name: "Nível 5",             icon: "⭐", category: "level",
+    description: "Alcance o Nível 5 e desbloqueie novos desafios.",
+    level: 5, questsRequired: 0,  xpBonus: 150,  coinsBonus: 50 },
+
+  { name: "Nível 10",            icon: "🌙", category: "level",
+    description: "Alcance o Nível 10 — metade do caminho para a grandeza!",
+    level: 10, questsRequired: 0, xpBonus: 300,  coinsBonus: 100 },
+
+  { name: "Nível 20",            icon: "☀️", category: "level",
+    description: "Nível 20 alcançado. Você transcendeu os limites comuns.",
+    level: 20, questsRequired: 0, xpBonus: 600,  coinsBonus: 250 },
+
+  { name: "Nível 50",            icon: "🔥", category: "level",
+    description: "Nível 50! Um dos adventureiros mais poderosos do reino.",
+    level: 50, questsRequired: 0, xpBonus: 2000, coinsBonus: 750 },
+
+  /* ── QUESTS DIÁRIAS ────────────────────────────────────────── */
+  { name: "Madrugador",          icon: "🌅", category: "daily",
+    description: "Complete quests diárias por 7 dias seguidos.",
+    level: 2, questsRequired: 7,  xpBonus: 200,  coinsBonus: 70 },
+
+  { name: "Rotina de Ferro",     icon: "⚡", category: "daily",
+    description: "30 quests diárias concluídas — a disciplina é sua força.",
+    level: 4, questsRequired: 30, xpBonus: 400,  coinsBonus: 150 },
+
+  /* ── QUESTS SEMANAIS ───────────────────────────────────────── */
+  { name: "Semanal Perfeito",    icon: "📅", category: "weekly",
+    description: "Complete 4 quests semanais consecutivas.",
+    level: 3, questsRequired: 4,  xpBonus: 250,  coinsBonus: 100 },
+
+  { name: "Mestre Semanal",      icon: "🏅", category: "weekly",
+    description: "20 quests semanais concluídas — dominante nas semanas!",
+    level: 6, questsRequired: 20, xpBonus: 500,  coinsBonus: 200 },
+
+  /* ── QUESTS MENSAIS ────────────────────────────────────────── */
+  { name: "Mensal de Elite",     icon: "🗓️", category: "monthly",
+    description: "Complete 3 quests mensais — raridade extraordinária!",
+    level: 5, questsRequired: 3,  xpBonus: 400,  coinsBonus: 200 },
+
+  { name: "Titã Mensal",         icon: "🏆", category: "monthly",
+    description: "12 quests mensais — um ano inteiro de dedicação!",
+    level: 10, questsRequired: 12, xpBonus: 1000, coinsBonus: 500 },
+
+  /* ── EVENTOS ───────────────────────────────────────────────── */
+  { name: "Caçador de Eventos",  icon: "🎯", category: "event",
+    description: "Participe do seu primeiro evento especial.",
+    level: 1, questsRequired: 1,  xpBonus: 300,  coinsBonus: 100 },
+
+  { name: "Evento Lendário",     icon: "🎪", category: "event",
+    description: "Complete 5 quests de eventos — colecionador de raridades!",
+    level: 3, questsRequired: 5,  xpBonus: 600,  coinsBonus: 250 },
+
+  /* ── ESPECIAIS ─────────────────────────────────────────────── */
+  { name: "Colecionador",        icon: "💰", category: "special",
+    description: "Acumule 500 moedas — a fortuna sorri para os determinados.",
+    level: 3, questsRequired: 15, xpBonus: 250,  coinsBonus: 0 },
+
+  { name: "Milionário do Reino", icon: "💎", category: "special",
+    description: "Acumule 2000 moedas — a riqueza do reino está em suas mãos!",
+    level: 8, questsRequired: 50, xpBonus: 800,  coinsBonus: 0 },
+];
+
+/**
+ * Popula o banco com as conquistas padrão se não existir nenhuma.
+ * Seguro para chamar múltiplas vezes (verifica antes de criar).
+ */
+export async function proc_seedDefaultAchievements() {
+  const existing = await proc_getAllAchievements();
+  if (existing.length > 0) return { seeded: 0, existing: existing.length };
+
+  let seeded = 0;
+  for (const ach of DEFAULT_ACHIEVEMENTS) {
+    const newRef = push(ref(db, "achievements"));
+    await set(newRef, { ...ach, created_at: now() });
+    seeded++;
+  }
+  return { seeded, existing: 0 };
+}
 
 /**
  * Retorna TODAS as conquistas.
@@ -569,8 +689,9 @@ export async function proc_createAchievement(data) {
     name:           String(data.name || "").trim(),
     icon:           String(data.icon || "🏆").trim(),
     description:    String(data.description || "").trim(),
+    category:       String(data.category || "quests").trim(),
     level:          parseInt(data.level)          || 1,
-    questsRequired: parseInt(data.questsRequired) || 1,
+    questsRequired: parseInt(data.questsRequired) || 0,
     xpBonus:        parseInt(data.xpBonus)        || 0,
     coinsBonus:     parseInt(data.coinsBonus)     || 0,
     created_at:     now()
@@ -584,8 +705,9 @@ export async function proc_updateAchievement(achId, data) {
     name:           String(data.name || "").trim(),
     icon:           String(data.icon || "🏆").trim(),
     description:    String(data.description || "").trim(),
+    category:       String(data.category || "quests").trim(),
     level:          parseInt(data.level)          || 1,
-    questsRequired: parseInt(data.questsRequired) || 1,
+    questsRequired: parseInt(data.questsRequired) || 0,
     xpBonus:        parseInt(data.xpBonus)        || 0,
     coinsBonus:     parseInt(data.coinsBonus)     || 0,
     updated_at:     now()
@@ -989,6 +1111,7 @@ export const createAchievement       = proc_createAchievement;
 export const updateAchievement       = proc_updateAchievement;
 export const deleteAchievement       = proc_deleteAchievement;
 export const checkAndAwardAchievements = proc_checkAndAwardAchievements;
+export const seedDefaultAchievements = proc_seedDefaultAchievements;
 
 export const updateRankingEntry = proc_updateRankingEntry;
 export const getRanking         = proc_getRanking;

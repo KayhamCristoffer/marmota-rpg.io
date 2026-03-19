@@ -933,6 +933,39 @@ input, select, textarea { font-family: inherit; }
 
 .no-badges { color: var(--text-muted); font-size: 0.85rem; }
 
+/* ─── BADGE ITEM FULL (dynamic achievements) ─────────────────── */
+.badge-item-full {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  border-radius: var(--radius-md);
+  background: rgba(201,168,76,.10);
+  border: 1px solid rgba(201,168,76,.25);
+  transition: var(--transition);
+  cursor: default;
+}
+.badge-item-full:hover {
+  background: rgba(201,168,76,.18);
+  border-color: var(--gold);
+  transform: translateY(-2px);
+}
+.badge-icon {
+  font-size: 1.5rem;
+  line-height: 1;
+}
+.badge-label {
+  font-family: var(--font-title);
+  font-size: .82rem;
+  color: var(--gold);
+  font-weight: 600;
+}
+.badge-req {
+  font-size: .68rem;
+  color: var(--text-muted);
+  margin-left: 2px;
+}
+
 /* ─── FILTER BAR ──────────────────────────────────────────────── */
 .filter-bar {
   display: flex;
@@ -2490,3 +2523,998 @@ input, select, textarea { font-family: inherit; }
   background: rgba(249,115,22,.3);
   transform: translateY(-1px);
 }
+
+/* ════════════════════════════════════════════════════════════════
+   ACHIEVEMENTS (Conquistas) – Admin & User
+════════════════════════════════════════════════════════════════ */
+
+/* ── Info card ──────────────────────────────────────────────── */
+.achievement-info-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  background: rgba(201,168,76,.08);
+  border: 1px solid rgba(201,168,76,.2);
+  border-radius: var(--radius-md);
+  padding: 14px 18px;
+  margin-bottom: 18px;
+  font-size: .83rem;
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+.achievement-info-card i {
+  color: var(--gold);
+  font-size: 1.1rem;
+  margin-top: 2px;
+  flex-shrink: 0;
+}
+.achievement-info-card strong { color: var(--gold); }
+
+/* ── List ───────────────────────────────────────────────────── */
+.achievements-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* ── Item ───────────────────────────────────────────────────── */
+.achievement-item {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 14px 18px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  transition: var(--transition);
+  flex-wrap: wrap;
+}
+.achievement-item:hover { border-color: var(--gold); }
+
+.achievement-icon-big {
+  font-size: 2rem;
+  width: 52px;
+  height: 52px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(201,168,76,.1);
+  border: 1px solid rgba(201,168,76,.2);
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.achievement-info { flex: 1; min-width: 160px; }
+
+.achievement-name {
+  font-family: var(--font-title);
+  font-size: .95rem;
+  color: var(--gold);
+  margin-bottom: 3px;
+}
+
+.achievement-desc {
+  font-size: .78rem;
+  color: var(--text-muted);
+  margin-bottom: 6px;
+}
+
+.achievement-meta {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  font-size: .75rem;
+  color: var(--text-secondary);
+}
+.achievement-meta span {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.achievement-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+/* ── Icon input wrapper ─────────────────────────────────────── */
+.icon-input-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.icon-input-wrap input {
+  flex: 1;
+  min-width: 0;
+}
+.icon-preview {
+  font-size: 1.6rem;
+  width: 38px;
+  height: 38px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  flex-shrink: 0;
+}
+
+/* ── Form hint ──────────────────────────────────────────────── */
+.form-hint {
+  display: block;
+  font-size: .72rem;
+  color: var(--text-muted);
+  margin-top: 4px;
+}
+
+/* ── User badges in home.html (earned achievements) ────────── */
+.badge-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: .78rem;
+  font-weight: 600;
+  background: rgba(201,168,76,.12);
+  border: 1px solid rgba(201,168,76,.25);
+  color: var(--gold);
+}
+
+/* ── Review note in My Quests ───────────────────────────────── */
+.review-note {
+  color: var(--red, #ef4444);
+  font-size: .75rem;
+  display: block;
+  margin-top: 3px;
+}
+
+/* ── My quest button states ─────────────────────────────────── */
+.btn-submit-quest.pending {
+  background: rgba(249,115,22,.12);
+  color: var(--orange, #f97316);
+  cursor: not-allowed;
+}
+.btn-submit-quest.done {
+  background: rgba(34,197,94,.12);
+  color: var(--green, #22c55e);
+  cursor: not-allowed;
+}
+
+/* ── Admin pageTitles ───────────────────────────────────────── */
+@media (max-width: 600px) {
+  .achievement-item { flex-wrap: wrap; }
+  .achievement-actions { width: 100%; justify-content: flex-end; }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   LISTAS COMPLETAS – garantir visibilidade de TODOS os itens
+   (overflow-y: auto; height: auto; no max-height hidden)
+═══════════════════════════════════════════════════════════════ */
+
+/* Quests grid: sem limite de altura, grid auto */
+.quests-grid {
+  height: auto !important;
+  overflow: visible !important;
+  max-height: none !important;
+}
+
+/* My Quests, Submissions, Admin Quests, Achievements: sem corte */
+.my-quests-list,
+.submissions-list,
+.admin-quests-list,
+.achievements-list,
+.ranking-list {
+  height: auto !important;
+  max-height: none !important;
+  overflow: visible !important;
+}
+
+/* Garantir que o container de conteúdo não corte listas */
+.page.active {
+  overflow: visible !important;
+}
+
+/* Users table: scrollable horizontalmente em mobile */
+.users-table-wrap {
+  overflow-x: auto !important;
+}
+
+/* Rankings listagem sem corte */
+.ranking-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  height: auto !important;
+  max-height: none !important;
+}
+
+/* Badge dinâmico no ranking */
+.rank-badge {
+  font-size: .85rem;
+  margin-left: 3px;
+  vertical-align: middle;
+}
+
+/* Submissão: avatar emoji */
+.submission-avatar-emoji {
+  width: 38px;
+  height: 38px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.4rem;
+  background: var(--bg-secondary);
+  border-radius: 50%;
+  border: 2px solid var(--border);
+  flex-shrink: 0;
+}
+
+/* Tabela de usuários: avatar emoji */
+.table-avatar-emoji {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.2rem;
+  background: var(--bg-secondary);
+  border-radius: 50%;
+  border: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+/* ─────────────────────────────────────────────────────────────
+   QUEST COOLDOWN / COUNTDOWN
+───────────────────────────────────────────────────────────────*/
+.quest-cooldown-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 10px 12px;
+  background: rgba(34, 197, 94, 0.08);
+  border: 1px solid rgba(34, 197, 94, 0.25);
+  border-radius: 10px;
+  margin-top: 8px;
+}
+
+.quest-cooldown-label {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.quest-countdown {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--gold);
+  font-family: 'Courier New', monospace;
+  letter-spacing: 1px;
+}
+
+/* Minhas Quests — reset timer ao lado do botão concluído */
+.my-quest-completed-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+}
+
+.my-quest-reset {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.7rem;
+  color: var(--text-muted);
+}
+
+.my-quest-reset i {
+  font-size: 0.65rem;
+  color: var(--gold);
+}
+
+/* ─────────────────────────────────────────────────────────────
+   MODAL ENVIO DE LINK (prnt.sc)
+───────────────────────────────────────────────────────────────*/
+/* Instrução prnt.sc */
+.prntsc-instructions {
+  display: flex;
+  gap: 14px;
+  background: rgba(240, 192, 64, 0.07);
+  border: 1px solid rgba(240, 192, 64, 0.2);
+  border-radius: 10px;
+  padding: 14px;
+  margin-bottom: 18px;
+}
+
+.prntsc-icon {
+  font-size: 1.8rem;
+  color: var(--gold);
+  flex-shrink: 0;
+  display: flex;
+  align-items: flex-start;
+  padding-top: 2px;
+}
+
+.prntsc-text {
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+
+.prntsc-text strong {
+  color: var(--text-primary);
+  display: block;
+  margin-bottom: 6px;
+}
+
+.prntsc-text ol {
+  margin: 0;
+  padding-left: 18px;
+}
+
+.prntsc-text li {
+  margin-bottom: 4px;
+}
+
+.prntsc-text a {
+  color: var(--gold);
+  text-decoration: underline;
+}
+
+.prntsc-text code {
+  background: rgba(255,255,255,0.08);
+  padding: 1px 5px;
+  border-radius: 4px;
+  font-family: monospace;
+  font-size: 0.8em;
+  color: var(--text-primary);
+}
+
+.prntsc-text kbd {
+  background: rgba(255,255,255,0.12);
+  border: 1px solid rgba(255,255,255,0.2);
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-size: 0.8em;
+  font-family: monospace;
+}
+
+/* Link input */
+.print-link-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.print-link-label {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.print-link-input {
+  width: 100%;
+  background: var(--bg-secondary);
+  border: 2px solid var(--border);
+  border-radius: 10px;
+  padding: 12px 16px;
+  color: var(--text-primary);
+  font-size: 0.9rem;
+  font-family: monospace;
+  transition: border-color 0.2s;
+  box-sizing: border-box;
+}
+
+.print-link-input:focus {
+  outline: none;
+  border-color: var(--gold);
+}
+
+.print-link-input::placeholder {
+  color: var(--text-muted);
+}
+
+/* Preview do link */
+.link-preview-wrap {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 12px;
+  background: rgba(34, 197, 94, 0.08);
+  border: 1px solid rgba(34, 197, 94, 0.25);
+  border-radius: 8px;
+}
+
+.link-preview-status {
+  font-size: 0.82rem;
+  color: #22c55e;
+  font-weight: 600;
+}
+
+.link-preview-open {
+  font-size: 0.8rem;
+  color: var(--gold);
+  text-decoration: none;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin-left: auto;
+}
+
+.link-preview-open:hover {
+  text-decoration: underline;
+}
+
+/* Mensagem de validação */
+.link-validation-msg {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  min-height: 18px;
+}
+
+.link-validation-msg.invalid {
+  color: #f87171;
+}
+
+/* Preview inline da imagem */
+.image-preview .preview-label {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  margin-bottom: 6px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.preview-img-link {
+  max-width: 100%;
+  max-height: 200px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  object-fit: contain;
+  display: block;
+}
+
+/* Admin: visualizar link de print nas submissões */
+.print-link-view {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin: 6px 0;
+}
+
+.print-link-view a {
+  color: var(--gold);
+  font-size: 0.82rem;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  border: 1px solid rgba(240,192,64,0.3);
+  padding: 4px 10px;
+  border-radius: 6px;
+  transition: background 0.2s;
+}
+
+.print-link-view a:hover {
+  background: rgba(240,192,64,0.1);
+  text-decoration: underline;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   RANKING ADMIN  –  tabela, tabs, reset cards aprimorados
+═══════════════════════════════════════════════════════════════ */
+
+/* Reset cards – layout horizontal */
+.reset-card {
+  display: flex !important;
+  align-items: center;
+  gap: 16px;
+  padding: 20px 24px !important;
+  text-align: left !important;
+}
+
+.reset-card > i { font-size: 1.8rem !important; margin-bottom: 0 !important; flex-shrink: 0; }
+
+.reset-card-icon {
+  width: 52px; height: 52px;
+  border-radius: 12px;
+  background: rgba(240,192,64,.12);
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+  font-size: 1.4rem;
+  color: var(--gold);
+}
+
+.reset-card-info { flex: 1; min-width: 0; }
+.reset-card-info h3 { font-family: var(--font-title); font-size: .95rem; color: var(--text-primary); margin-bottom: 4px; }
+.reset-card-info p  { font-size: .78rem; color: var(--text-secondary); margin-bottom: 4px; }
+
+.ranking-next-reset {
+  font-size: .75rem;
+  color: var(--gold);
+  font-weight: 600;
+}
+
+/* Ranking admin tabs */
+.ranking-admin-tabs {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin: 24px 0 16px;
+}
+
+.ranking-tab {
+  padding: 8px 20px;
+  border-radius: 20px;
+  border: 1px solid var(--border);
+  background: var(--bg-secondary);
+  color: var(--text-secondary);
+  font-size: .85rem;
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.ranking-tab:hover { border-color: var(--gold); color: var(--gold); }
+.ranking-tab.active { background: rgba(240,192,64,.15); border-color: var(--gold); color: var(--gold); font-weight: 600; }
+
+/* Ranking admin table */
+.ranking-admin-table-wrap {
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  border: 1px solid var(--border);
+}
+
+.ranking-admin-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: var(--bg-card);
+}
+
+.ranking-admin-table thead tr {
+  background: var(--bg-secondary);
+}
+
+.ranking-admin-table th {
+  padding: 12px 16px;
+  text-align: left;
+  font-size: .78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .05em;
+  color: var(--text-muted);
+  border-bottom: 1px solid var(--border);
+}
+
+.ranking-admin-table td {
+  padding: 12px 16px;
+  font-size: .85rem;
+  color: var(--text-primary);
+  border-bottom: 1px solid rgba(255,255,255,.04);
+  vertical-align: middle;
+}
+
+.ranking-admin-table tbody tr:last-child td { border-bottom: none; }
+.ranking-admin-table tbody tr:hover { background: rgba(255,255,255,.03); }
+
+/* Top 3 rows */
+.ranking-top-1 td { background: rgba(240,192,64,.06); }
+.ranking-top-2 td { background: rgba(192,192,192,.04); }
+.ranking-top-3 td { background: rgba(205,127,50,.04); }
+
+/* Rank position cell */
+.rank-pos {
+  font-size: 1.2rem;
+  font-weight: 700;
+  width: 48px;
+  text-align: center;
+}
+
+/* Level badge small */
+.level-badge-sm {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: .72rem;
+  font-weight: 700;
+  background: rgba(168,85,247,.18);
+  color: var(--purple-light);
+}
+
+/* Rank coins */
+.rank-coins {
+  font-family: var(--font-title);
+  color: var(--gold);
+  font-size: .9rem;
+}
+
+/* Rank badge icon (in table) */
+.rank-badge-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px; height: 26px;
+  border-radius: 6px;
+  background: rgba(240,192,64,.12);
+  font-size: .9rem;
+  margin-right: 3px;
+}
+
+/* Loading row */
+.ranking-loading {
+  text-align: center;
+  padding: 32px !important;
+  color: var(--text-secondary);
+  font-size: .875rem;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   ACHIEVEMENTS ADMIN  –  categorias, badges, grid
+═══════════════════════════════════════════════════════════════ */
+
+/* Lista de conquistas */
+.achievements-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.achievement-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  padding: 18px 20px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  transition: var(--transition);
+}
+
+.achievement-item:hover { border-color: var(--border-hover); }
+
+.achievement-icon-big {
+  font-size: 2rem;
+  width: 52px; height: 52px;
+  display: flex; align-items: center; justify-content: center;
+  border-radius: 12px;
+  background: rgba(240,192,64,.1);
+  flex-shrink: 0;
+}
+
+.achievement-info { flex: 1; min-width: 0; }
+
+.achievement-name-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 4px;
+}
+
+.achievement-name {
+  font-family: var(--font-title);
+  font-size: .95rem;
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+.achievement-desc {
+  font-size: .8rem;
+  color: var(--text-secondary);
+  margin-bottom: 8px;
+  line-height: 1.4;
+}
+
+.achievement-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  font-size: .75rem;
+  color: var(--text-secondary);
+}
+
+.achievement-meta span {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 8px;
+  background: rgba(255,255,255,.05);
+}
+
+.achievement-meta i { color: var(--gold); }
+
+.achievement-actions {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+  align-items: flex-start;
+}
+
+/* Achievement category badges */
+.achievement-cat-badge {
+  display: inline-block;
+  padding: 2px 10px;
+  border-radius: 12px;
+  font-size: .68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+}
+
+.cat-quests  { background: rgba(99,102,241,.2);  color: #818cf8; }
+.cat-daily   { background: rgba(251,146,60,.2);  color: #fb923c; }
+.cat-weekly  { background: rgba(59,130,246,.2);  color: #60a5fa; }
+.cat-monthly { background: rgba(168,85,247,.2);  color: #c084fc; }
+.cat-event   { background: rgba(240,192,64,.2);  color: var(--gold); }
+.cat-level   { background: rgba(34,197,94,.2);   color: #4ade80; }
+.cat-special { background: rgba(244,63,94,.2);   color: #fb7185; }
+
+/* Achievements info card */
+.achievement-info-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 14px 18px;
+  background: rgba(240,192,64,.07);
+  border: 1px solid rgba(240,192,64,.2);
+  border-radius: var(--radius-md);
+  font-size: .82rem;
+  color: var(--text-secondary);
+  margin-bottom: 20px;
+}
+
+.achievement-info-card i { color: var(--gold); font-size: 1rem; margin-top: 2px; flex-shrink: 0; }
+.achievement-info-card strong { color: var(--text-primary); }
+
+/* Achievement category group header */
+.ach-category-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 4px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 8px;
+  margin-top: 16px;
+  font-family: var(--font-title);
+  font-size: .85rem;
+  color: var(--text-secondary);
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   RANKING PAGE (home.html) – podium, lista, posição destacada
+═══════════════════════════════════════════════════════════════ */
+
+.ranking-podium {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 12px;
+  padding: 24px 0 8px;
+  flex-wrap: wrap;
+}
+
+.podium-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  flex: 0 0 120px;
+  text-align: center;
+}
+
+.podium-item.pos-1 { order: 2; transform: translateY(-18px); }
+.podium-item.pos-2 { order: 1; }
+.podium-item.pos-3 { order: 3; }
+
+.podium-avatar, .podium-avatar-emoji {
+  width: 60px; height: 60px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 3px solid var(--gold);
+}
+
+.podium-avatar-emoji {
+  font-size: 2rem;
+  display: flex; align-items: center; justify-content: center;
+  background: rgba(240,192,64,.12);
+}
+
+.pos-1 .podium-avatar, .pos-1 .podium-avatar-emoji { width: 72px; height: 72px; border-color: #ffd700; }
+.pos-2 .podium-avatar, .pos-2 .podium-avatar-emoji { border-color: #c0c0c0; }
+.pos-3 .podium-avatar, .pos-3 .podium-avatar-emoji { border-color: #cd7f32; }
+
+.podium-name {
+  font-family: var(--font-title);
+  font-size: .78rem;
+  color: var(--text-primary);
+  max-width: 110px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.podium-coins { font-size: .72rem; color: var(--gold); }
+
+.podium-stand {
+  font-size: 1.4rem;
+  margin-top: 2px;
+}
+
+.ranking-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.ranking-item {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 12px 18px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  transition: var(--transition);
+}
+
+.ranking-item:hover { border-color: var(--border-hover); }
+.ranking-item.is-me  { border-color: rgba(240,192,64,.5); background: rgba(240,192,64,.06); }
+
+.rank-position {
+  font-size: .95rem;
+  font-weight: 700;
+  width: 36px;
+  text-align: center;
+  flex-shrink: 0;
+  color: var(--text-secondary);
+}
+
+.ranking-avatar, .ranking-avatar-emoji {
+  width: 38px; height: 38px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+.ranking-avatar-emoji {
+  font-size: 1.4rem;
+  display: flex; align-items: center; justify-content: center;
+  background: rgba(240,192,64,.1);
+}
+
+.ranking-name {
+  flex: 1;
+  font-family: var(--font-title);
+  font-size: .88rem;
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  flex-wrap: wrap;
+  min-width: 0;
+}
+
+.ranking-level {
+  font-size: .75rem;
+  color: var(--purple-light);
+  flex-shrink: 0;
+}
+
+.ranking-coins {
+  font-family: var(--font-title);
+  color: var(--gold);
+  font-size: .88rem;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* ranking badge pills */
+.rank-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: .9rem;
+  margin-left: 2px;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   QUEST COOLDOWN / COUNTDOWN
+═══════════════════════════════════════════════════════════════ */
+
+.quest-cooldown-wrap {
+  margin-top: 14px;
+  padding: 10px 14px;
+  background: rgba(34,197,94,.08);
+  border: 1px solid rgba(34,197,94,.2);
+  border-radius: var(--radius-md);
+}
+
+.quest-cooldown-label {
+  font-size: .78rem;
+  color: #4ade80;
+  font-weight: 600;
+  margin-bottom: 4px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.quest-countdown {
+  font-size: .85rem;
+  font-family: var(--font-title);
+  color: var(--text-primary);
+  letter-spacing: .05em;
+}
+
+/* Cooldown on my-quest items */
+.my-quest-reset {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: .72rem;
+  color: #4ade80;
+  padding: 2px 8px;
+  border-radius: 8px;
+  background: rgba(34,197,94,.1);
+}
+
+.my-quest-completed-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   TABLE USER CELL (shared across admin tables)
+═══════════════════════════════════════════════════════════════ */
+
+.table-user-cell {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.table-avatar {
+  width: 32px; height: 32px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+.table-avatar-emoji {
+  width: 32px; height: 32px;
+  border-radius: 50%;
+  font-size: 1.2rem;
+  display: flex; align-items: center; justify-content: center;
+  background: rgba(240,192,64,.1);
+  flex-shrink: 0;
+}
+
+.table-user-name {
+  font-family: var(--font-title);
+  font-size: .85rem;
+  color: var(--text-primary);
+}
+
+.table-user-sub {
+  font-size: .7rem;
+  color: var(--text-muted);
+}
+

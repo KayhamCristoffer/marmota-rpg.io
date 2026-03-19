@@ -45,6 +45,10 @@
         <i class="fas fa-scroll"></i>
         <span>Gerenciar Quests</span>
       </a>
+      <a href="#" class="nav-item" data-page="achievements">
+        <i class="fas fa-medal"></i>
+        <span>Conquistas</span>
+      </a>
       <a href="#" class="nav-item" data-page="users">
         <i class="fas fa-users"></i>
         <span>Usuários</span>
@@ -86,7 +90,6 @@
           </button>
         </div>
       </div>
-
       <div class="submissions-list" id="submissionsList">
         <div class="loading-spinner"><i class="fas fa-spinner fa-spin"></i> Carregando...</div>
       </div>
@@ -105,8 +108,38 @@
           </button>
         </div>
       </div>
-
       <div class="admin-quests-list" id="adminQuestsList">
+        <div class="loading-spinner"><i class="fas fa-spinner fa-spin"></i> Carregando...</div>
+      </div>
+    </section>
+
+    <!-- ── PAGE: ACHIEVEMENTS ── -->
+    <section class="page" id="page-achievements">
+      <div class="page-header">
+        <h2 class="page-title"><i class="fas fa-medal"></i> Gerenciar Conquistas</h2>
+        <div style="display:flex;gap:.6rem;align-items:center">
+          <span class="pending-count-badge" id="achievementsCount" style="font-size:.75rem"></span>
+          <button class="btn-refresh" id="refreshAchievementsBtn" title="Atualizar">
+            <i class="fas fa-sync-alt"></i> Atualizar
+          </button>
+          <button class="btn-primary" id="createAchievementBtn">
+            <i class="fas fa-plus"></i> Nova Conquista
+          </button>
+        </div>
+      </div>
+
+      <!-- Info card -->
+      <div class="achievement-info-card">
+        <i class="fas fa-info-circle"></i>
+        <div>
+          <strong>Como funcionam as conquistas:</strong>
+          São concedidas automaticamente quando o usuário completa o número de quests
+          exigido <em>e</em> atinge o nível mínimo. Bônus de moedas e XP são creditados
+          ao receber. Use categorias para organizar por tipo de desafio.
+        </div>
+      </div>
+
+      <div class="achievements-list" id="achievementsList">
         <div class="loading-spinner"><i class="fas fa-spinner fa-spin"></i> Carregando...</div>
       </div>
     </section>
@@ -147,33 +180,74 @@
     <section class="page" id="page-ranking-admin">
       <div class="page-header">
         <h2 class="page-title"><i class="fas fa-trophy"></i> Gestão de Rankings</h2>
+        <button class="btn-secondary" id="refreshRankingBtn" style="margin-left:auto">
+          <i class="fas fa-sync-alt"></i> Atualizar
+        </button>
       </div>
 
+      <!-- Reset Cards -->
       <div class="ranking-reset-cards">
         <div class="reset-card">
-          <i class="fas fa-sun"></i>
-          <h3>Ranking Diário</h3>
-          <p>Reseta às 00:00 automaticamente</p>
+          <div class="reset-card-icon"><i class="fas fa-sun"></i></div>
+          <div class="reset-card-info">
+            <h3>Ranking Diário</h3>
+            <p>Reseta às 00:00 de cada dia</p>
+            <div id="rankingNextReset_daily" class="ranking-next-reset"></div>
+          </div>
           <button class="btn-danger" data-period="daily" id="resetDaily">
-            <i class="fas fa-rotate"></i> Resetar Agora
+            <i class="fas fa-rotate"></i> Resetar
           </button>
         </div>
         <div class="reset-card">
-          <i class="fas fa-calendar-week"></i>
-          <h3>Ranking Semanal</h3>
-          <p>Reseta todo domingo automaticamente</p>
+          <div class="reset-card-icon"><i class="fas fa-calendar-week"></i></div>
+          <div class="reset-card-info">
+            <h3>Ranking Semanal</h3>
+            <p>Reseta todo domingo 00:00</p>
+            <div id="rankingNextReset_weekly" class="ranking-next-reset"></div>
+          </div>
           <button class="btn-danger" data-period="weekly" id="resetWeekly">
-            <i class="fas fa-rotate"></i> Resetar Agora
+            <i class="fas fa-rotate"></i> Resetar
           </button>
         </div>
         <div class="reset-card">
-          <i class="fas fa-calendar"></i>
-          <h3>Ranking Mensal</h3>
-          <p>Reseta todo dia 1 automaticamente</p>
+          <div class="reset-card-icon"><i class="fas fa-calendar"></i></div>
+          <div class="reset-card-info">
+            <h3>Ranking Mensal</h3>
+            <p>Reseta dia 1 de cada mês</p>
+            <div id="rankingNextReset_monthly" class="ranking-next-reset"></div>
+          </div>
           <button class="btn-danger" data-period="monthly" id="resetMonthly">
-            <i class="fas fa-rotate"></i> Resetar Agora
+            <i class="fas fa-rotate"></i> Resetar
           </button>
         </div>
+      </div>
+
+      <!-- Tabs de período -->
+      <div class="ranking-admin-tabs">
+        <button class="ranking-tab active" data-period="total">🏆 Total</button>
+        <button class="ranking-tab" data-period="daily">☀️ Diário</button>
+        <button class="ranking-tab" data-period="weekly">📅 Semanal</button>
+        <button class="ranking-tab" data-period="monthly">🗓️ Mensal</button>
+      </div>
+
+      <!-- Tabela de ranking -->
+      <div class="ranking-admin-table-wrap">
+        <table class="ranking-admin-table" id="rankingAdminTable">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Jogador</th>
+              <th>Nível</th>
+              <th>Moedas</th>
+              <th>Conquistas</th>
+            </tr>
+          </thead>
+          <tbody id="rankingAdminBody">
+            <tr><td colspan="5" class="ranking-loading">
+              <i class="fas fa-spinner fa-spin"></i> Carregando ranking...
+            </td></tr>
+          </tbody>
+        </table>
       </div>
     </section>
 
@@ -220,7 +294,7 @@
           </div>
           <div class="form-row">
             <div class="form-group">
-              <label>Máx. Usuários <small>(deixe vazio para ilimitado)</small></label>
+              <label>Máx. Usuários <small>(vazio = ilimitado)</small></label>
               <input type="number" id="questMaxUsers" min="1" placeholder="Ilimitado"/>
             </div>
             <div class="form-group">
@@ -234,7 +308,7 @@
               <input type="datetime-local" id="questExpiresAt"/>
             </div>
             <div class="form-group">
-              <label>Nome do Evento <small>(para tipo evento)</small></label>
+              <label>Nome do Evento <small>(tipo evento)</small></label>
               <input type="text" id="questEventName" placeholder="Ex: Evento de Natal"/>
             </div>
           </div>
@@ -250,6 +324,91 @@
         <button class="btn-secondary" id="cancelQuestModal">Cancelar</button>
         <button class="btn-primary" id="saveQuestBtn">
           <i class="fas fa-save"></i> Salvar Quest
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─── MODAL: CRIAR/EDITAR CONQUISTA ──────────────────────── -->
+  <div class="modal-overlay" id="achievementModal" style="display:none">
+    <div class="modal modal-large">
+      <div class="modal-header">
+        <h3 id="achModalTitle"><i class="fas fa-plus"></i> Nova Conquista</h3>
+        <button class="modal-close" id="closeAchievementModal"><i class="fas fa-times"></i></button>
+      </div>
+      <div class="modal-body">
+        <form id="achForm">
+          <input type="hidden" id="achId"/>
+
+          <!-- Ícone com preview -->
+          <div class="form-row">
+            <div class="form-group" style="flex:1">
+              <label>Nome da Conquista *</label>
+              <input type="text" id="achName" placeholder="Ex: Guerreiro Bronze" required/>
+            </div>
+            <div class="form-group" style="flex:0 0 140px">
+              <label>Ícone (emoji)</label>
+              <div class="icon-input-wrap">
+                <input type="text" id="achIcon" placeholder="🏆" maxlength="8"/>
+                <span class="icon-preview" id="achIconPreview">🏆</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label>Descrição</label>
+            <textarea id="achDescription" placeholder="Como obter esta conquista..." rows="2"></textarea>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label><i class="fas fa-scroll"></i> Quests necessárias</label>
+              <input type="number" id="achQuestsRequired" min="0" value="0"/>
+              <small class="form-hint">Quests concluídas necessárias (0 = sem requisito)</small>
+            </div>
+            <div class="form-group">
+              <label><i class="fas fa-shield-alt"></i> Nível mínimo</label>
+              <input type="number" id="achLevel" min="1" value="1"/>
+              <small class="form-hint">Nível do usuário para desbloquear</small>
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label><i class="fas fa-tag"></i> Categoria</label>
+              <select id="achCategory">
+                <option value="quests">⚔️ Quests Gerais</option>
+                <option value="daily">☀️ Quests Diárias</option>
+                <option value="weekly">📅 Quests Semanais</option>
+                <option value="monthly">🗓️ Quests Mensais</option>
+                <option value="event">⭐ Eventos</option>
+                <option value="level">🌟 Nível</option>
+                <option value="special">💎 Especial</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <!-- espaço reservado -->
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label><i class="fas fa-coins"></i> Bônus de Moedas</label>
+              <input type="number" id="achCoinsBonus" min="0" value="0" placeholder="0"/>
+              <small class="form-hint">Moedas extras ao conquistar</small>
+            </div>
+            <div class="form-group">
+              <label><i class="fas fa-star"></i> Bônus de XP</label>
+              <input type="number" id="achXpBonus" min="0" value="0" placeholder="0"/>
+              <small class="form-hint">XP extra ao conquistar</small>
+            </div>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-secondary" id="cancelAchievementModal">Cancelar</button>
+        <button class="btn-primary" id="saveAchievementBtn">
+          <i class="fas fa-save"></i> Salvar Conquista
         </button>
       </div>
     </div>

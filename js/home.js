@@ -87,22 +87,22 @@ window.loadStats = async function loadStats() {
     _set("coinsWeekly",  el => el.textContent = (data.coinsWeekly ||0).toLocaleString("pt-BR"));
     _set("coinsMonthly", el => el.textContent = (data.coinsMonthly||0).toLocaleString("pt-BR"));
 
-    // Badges
-    const badgesGrid  = document.getElementById("badgesGrid");
-    const badgeLabels = {
-      first_quest: { label: "⚡ Primeira Quest",       css: "badge-first_quest" },
-      bronze:      { label: "🥉 Bronze (10 quests)",   css: "badge-bronze" },
-      silver:      { label: "🥈 Prata (50 quests)",    css: "badge-silver" },
-      gold:        { label: "🥇 Ouro (100 quests)",    css: "badge-gold" },
-      diamond:     { label: "💎 Diamante (250 quests)", css: "badge-diamond" }
-    };
+    // Badges / Conquistas (dinâmicas do Firebase)
+    const badgesGrid = document.getElementById("badgesGrid");
     if (badgesGrid) {
-      badgesGrid.innerHTML = data.badges?.length
-        ? data.badges.map(b => {
-            const info = badgeLabels[b] || { label: b, css: "" };
-            return `<span class="badge-item ${info.css}">${info.label}</span>`;
-          }).join("")
-        : "<p class='no-badges'>Complete quests para ganhar conquistas!</p>";
+      const earned = data.earnedAchievements || [];
+      if (earned.length > 0) {
+        badgesGrid.innerHTML = earned.map(a => `
+          <div class="badge-item-full" title="${escapeHtml(a.description||'')}">
+            <span class="badge-icon">${escapeHtml(a.icon || "🏆")}</span>
+            <span class="badge-label">${escapeHtml(a.name)}</span>
+            ${(a.questsRequired||0) > 0
+              ? `<span class="badge-req">${a.questsRequired} quests</span>`
+              : ""}
+          </div>`).join("");
+      } else {
+        badgesGrid.innerHTML = "<p class='no-badges'>Complete quests para ganhar conquistas!</p>";
+      }
     }
 
     // Badge pendingBadge

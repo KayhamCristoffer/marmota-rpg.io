@@ -14,8 +14,9 @@ import {
   updateUserRole,
   createQuest, updateQuest, toggleQuest, deleteQuest,
   approveSubmission, rejectSubmission,
-  resetRanking,
+  resetRanking, listenRanking,
   createAchievement, updateAchievement, deleteAchievement,
+  seedDefaultAchievements,
   listenSubmissions, listenQuests as _listenQuests,
   listenUsers, listenAchievements
 } from "../firebase/database.js";
@@ -33,11 +34,18 @@ document.addEventListener("DOMContentLoaded", async () => {
   const user = await window.RPG.waitForSession(true, true);
   if (!user) return;
 
+  /* Semente de conquistas padrão (só roda se banco estiver vazio) */
+  seedDefaultAchievements().then(r => {
+    if (r.seeded > 0)
+      window.showToast?.(`✅ ${r.seeded} conquistas padrão criadas!`, "success");
+  }).catch(() => {});
+
   /* Inicia todos os listeners em tempo real */
   loadSubmissions();
   loadAdminQuests();
   loadUsers();
   loadAchievements();
+
 
   /* Roteador de páginas */
   window.loadPage = async (page) => {
@@ -45,7 +53,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       case "submissions":   loadSubmissions();  break;
       case "quests":        loadAdminQuests();  break;
       case "users":         loadUsers();        break;
-      case "ranking-admin": setupRankingAdmin(); break;
+      case "ranking-admin": setupRankingAdmin(); loadRankingAdmin(); break;
       case "achievements":  loadAchievements(); break;
     }
   };
@@ -458,35 +466,79 @@ function loadAchievements() {
   _unsubAchievements = listenAchievements((achs) => {
     _allAchievements = achs;
 
+    /* Atualiza contador no header */
+    _set("achievementsCount", el => el.textContent = `${achs.length} conquista(s)`);
+
+
     if (achs.length === 0) {
       list.innerHTML = `<div class="empty-state">
         <i class="fas fa-medal"></i>
         <h3>Nenhuma conquista criada</h3>
-        <p>Clique em "Nova Conquista" para começar!</p></div>`;
+        <p>Clique em "Nova Conquista" para adicionar ou aguarde o carregamento automático.</p></div>`;
       return;
     }
 
-    list.innerHTML = achs.map(a => `
+    /* Categorias: ordem + meta */
+    const catOrder  = ["quests","daily","weekly","monthly","event","level","special"];
+    const catLabels = {
+      quests:  { label: "⚔️ Quests Gerais",   css: "cat-quests"  },
+      daily:   { label: "☀️ Diárias",          css: "cat-daily"   },
+      weekly:  { label: "📅 Semanais",         css: "cat-weekly"  },
+      monthly: { label: "🗓️ Mensais",          css: "cat-monthly" },
+      event:   { label: "⭐ Eventos",          css: "cat-event"   },
+      level:   { label: "🌟 Nível",            css: "cat-level"   },
+      special: { label: "💎 Especial",         css: "cat-special" }
+    };
+
+    /* Agrupa conquistas por categoria */
+    const grouped = {};
+    achs.forEach(a => {
+      const cat = a.category || "quests";
+      if (!grouped[cat]) grouped[cat] = [];
+      grouped[cat].push(a);
+    });
+
+    /* Monta HTML com headers de categoria */
+    const _renderAchItem = a => {
+      const catInfo = catLabels[a.category] || catLabels.quests;
+      return `
       <div class="achievement-item" id="ach-${a.id}">
         <div class="achievement-icon-big">${escapeHtml(a.icon || "🏆")}</div>
         <div class="achievement-info">
-          <div class="achievement-name">${escapeHtml(a.name)}</div>
+          <div class="achievement-name-row">
+            <span class="achievement-name">${escapeHtml(a.name)}</span>
+            <span class="achievement-cat-badge ${catInfo.css}">${catInfo.label}</span>
+          </div>
           <div class="achievement-desc">${escapeHtml(a.description || "")}</div>
           <div class="achievement-meta">
-            <span><i class="fas fa-scroll"></i> ${a.questsRequired || 0} quests</span>
+            ${(a.questsRequired || 0) > 0
+              ? `<span><i class="fas fa-scroll"></i> ${a.questsRequired} quests</span>`
+              : `<span><i class="fas fa-scroll" style="opacity:.4"></i> Nível apenas</span>`}
             <span><i class="fas fa-shield-alt"></i> Nível ${a.level || 1}+</span>
             ${(a.coinsBonus || 0) > 0 ? `<span><i class="fas fa-coins"></i> +${a.coinsBonus} moedas</span>` : ""}
-            ${(a.xpBonus    || 0) > 0 ? `<span><i class="fas fa-star"></i> +${a.xpBonus} XP</span>` : ""}
+            ${(a.xpBonus    || 0) > 0 ? `<span><i class="fas fa-star"></i> +${a.xpBonus} XP</span>`        : ""}
           </div>
         </div>
         <div class="achievement-actions">
-          <button class="btn-edit-quest"   data-id="${a.id}">
-            <i class="fas fa-edit"></i> Editar</button>
-          <button class="btn-delete-quest" data-id="${a.id}">
-            <i class="fas fa-trash"></i></button>
+          <button class="btn-edit-quest"   data-id="${a.id}"><i class="fas fa-edit"></i> Editar</button>
+          <button class="btn-delete-quest" data-id="${a.id}"><i class="fas fa-trash"></i></button>
         </div>
-      </div>`).join("");
+      </div>`;
+    };
 
+    let html = "";
+    catOrder.forEach(cat => {
+      const items = grouped[cat];
+      if (!items || items.length === 0) return;
+      const meta = catLabels[cat];
+      html += `<div class="ach-category-header">
+        <span class="achievement-cat-badge ${meta.css}">${meta.label}</span>
+        <span style="font-size:.72rem;color:var(--text-muted);margin-left:auto">${items.length} conquista(s)</span>
+      </div>`;
+      html += items.map(_renderAchItem).join("");
+    });
+
+    list.innerHTML = html;
     list.querySelectorAll(".btn-edit-quest")  .forEach(b => b.addEventListener("click", () => openAchievementModal(b.dataset.id)));
     list.querySelectorAll(".btn-delete-quest").forEach(b => b.addEventListener("click", () => doDeleteAchievement(b.dataset.id)));
   });
@@ -517,13 +569,15 @@ function openAchievementModal(achId) {
       _set("achXpBonus",        el => el.value = a.xpBonus || 0);
       _set("achCoinsBonus",     el => el.value = a.coinsBonus || 0);
       if (prev) prev.textContent = a.icon || "🏆";
+      _set("achCategory", el => el.value = a.category || "quests");
     }
   } else {
     if (titleEl) titleEl.innerHTML = '<i class="fas fa-plus"></i> Nova Conquista';
     _set("achLevel",          el => el.value = 1);
-    _set("achQuestsRequired", el => el.value = 1);
+    _set("achQuestsRequired", el => el.value = 0);
     _set("achXpBonus",        el => el.value = 0);
     _set("achCoinsBonus",     el => el.value = 0);
+    _set("achCategory",       el => el.value = "quests");
   }
   document.getElementById("achievementModal").style.display = "flex";
 }
@@ -538,10 +592,11 @@ async function _saveAchievement() {
     name,
     icon:           icon || "🏆",
     description:    document.getElementById("achDescription")?.value?.trim() || "",
-    level:          document.getElementById("achLevel")?.value          || 1,
-    questsRequired: document.getElementById("achQuestsRequired")?.value || 1,
-    xpBonus:        document.getElementById("achXpBonus")?.value        || 0,
-    coinsBonus:     document.getElementById("achCoinsBonus")?.value     || 0
+    category:       document.getElementById("achCategory")?.value            || "quests",
+    level:          document.getElementById("achLevel")?.value               || 1,
+    questsRequired: document.getElementById("achQuestsRequired")?.value      || 0,
+    xpBonus:        document.getElementById("achXpBonus")?.value             || 0,
+    coinsBonus:     document.getElementById("achCoinsBonus")?.value          || 0
   };
 
   const saveBtn  = document.getElementById("saveAchievementBtn");
@@ -661,29 +716,130 @@ window.doToggleRole = async (uid, currentRole) => {
 };
 
 /* ════════════════════════════════════════════════════════════════
-   RANKING ADMIN
+   RANKING ADMIN  –  exibe rankings + botões de reset
 ════════════════════════════════════════════════════════════════ */
+let _currentRankingPeriod = "total";
+let _unsubRanking         = null;
+
+function _getNextResetLabel(type) {
+  const now  = new Date();
+  let reset;
+  if (type === "daily") {
+    reset = new Date(now); reset.setDate(reset.getDate() + 1); reset.setHours(0,0,0,0);
+  } else if (type === "weekly") {
+    reset = new Date(now);
+    const dow = reset.getDay(); const days = dow === 0 ? 7 : 7 - dow;
+    reset.setDate(reset.getDate() + days); reset.setHours(0,0,0,0);
+  } else if (type === "monthly") {
+    reset = new Date(now.getFullYear(), now.getMonth() + 1, 1, 0, 0, 0, 0);
+  }
+  if (!reset) return "";
+  const diff = reset - now;
+  const d = Math.floor(diff / 86400000);
+  const h = Math.floor((diff % 86400000) / 3600000);
+  const m = Math.floor((diff % 3600000)  / 60000);
+  if (d > 0) return `Próximo reset em ${d}d ${h}h`;
+  if (h > 0) return `Próximo reset em ${h}h ${m}m`;
+  return `Próximo reset em ${m}m`;
+}
+
 function setupRankingAdmin() {
+  /* Preenche labels de próximo reset */
+  ["daily","weekly","monthly"].forEach(p => {
+    _set(`rankingNextReset_${p}`, el => el.textContent = _getNextResetLabel(p));
+  });
+
+  /* Botões de reset */
   ["resetDaily", "resetWeekly", "resetMonthly"].forEach(btnId => {
     const btn = document.getElementById(btnId);
     if (!btn || btn._bound) return;
     btn._bound = true;
     btn.addEventListener("click", async () => {
       const period = btn.dataset.period;
-      if (!confirm(`Resetar ranking ${period}? Ação irreversível!`)) return;
+      if (!confirm(`Resetar ranking ${period}? Esta ação não pode ser desfeita!`)) return;
       const orig = btn.innerHTML;
       btn.disabled = true;
-      btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Resetando...';
+      btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
       try {
         await resetRanking(period);
         window.showToast?.(`✅ Ranking ${period} resetado!`, "success");
+        loadRankingAdmin(_currentRankingPeriod);
       } catch (err) {
         window.showToast?.(err.message || "Erro ao resetar", "error");
       } finally {
-        btn.disabled = false;
-        btn.innerHTML = orig;
+        btn.disabled = false; btn.innerHTML = orig;
       }
     });
+  });
+
+  /* Tabs de período */
+  document.querySelectorAll(".ranking-tab").forEach(tab => {
+    if (tab._rankBound) return;
+    tab._rankBound = true;
+    tab.addEventListener("click", () => {
+      document.querySelectorAll(".ranking-tab").forEach(t => t.classList.remove("active"));
+      tab.classList.add("active");
+      _currentRankingPeriod = tab.dataset.period;
+      loadRankingAdmin(_currentRankingPeriod);
+    });
+  });
+
+  /* Botão refresh */
+  const refreshBtn = document.getElementById("refreshRankingBtn");
+  if (refreshBtn && !refreshBtn._rankBound) {
+    refreshBtn._rankBound = true;
+    refreshBtn.addEventListener("click", () => loadRankingAdmin(_currentRankingPeriod));
+  }
+}
+
+function loadRankingAdmin(period = "total") {
+  _currentRankingPeriod = period;
+  const tbody = document.getElementById("rankingAdminBody");
+  if (!tbody) return;
+
+  tbody.innerHTML = `<tr><td colspan="5" class="ranking-loading">
+    <i class="fas fa-spinner fa-spin"></i> Carregando ranking ${period}...</td></tr>`;
+
+  /* Cancela listener anterior */
+  if (_unsubRanking) { _unsubRanking(); _unsubRanking = null; }
+
+  _unsubRanking = listenRanking(period, (entries) => {
+    if (!entries || entries.length === 0) {
+      tbody.innerHTML = `<tr><td colspan="5" class="ranking-loading" style="color:var(--text-muted)">
+        <i class="fas fa-trophy"></i> Nenhum dado de ranking ainda.</td></tr>`;
+      return;
+    }
+
+    tbody.innerHTML = entries.map((e, i) => {
+      const pos    = i + 1;
+      const medal  = pos === 1 ? "🥇" : pos === 2 ? "🥈" : pos === 3 ? "🥉" : `#${pos}`;
+      const avatarHtml = e.iconUrl
+        ? `<div class="table-avatar-emoji">${escapeHtml(e.iconUrl)}</div>`
+        : `<img src="${e.photoURL || avatarUrl(e.nickname || "?", 32)}"
+               alt="" class="table-avatar"
+               onerror="this.src='${avatarUrl("?", 32)}'"/>`;
+      const badges = Array.isArray(e.badges) && e.badges.length
+        ? e.badges.slice(0, 3).map(b => `<span class="rank-badge-icon" title="${escapeHtml(b.name || "")}">${b.icon || "🏆"}</span>`).join("")
+        : '<span style="color:var(--text-muted);font-size:.75rem">—</span>';
+
+      const rowClass = pos <= 3 ? `ranking-top-${pos}` : "";
+      return `
+      <tr class="${rowClass}">
+        <td class="rank-pos">${medal}</td>
+        <td>
+          <div class="table-user-cell">
+            ${avatarHtml}
+            <div>
+              <div class="table-user-name">${escapeHtml(e.nickname || "Aventureiro")}</div>
+              <div class="table-user-sub">${escapeHtml(e.username || "")}</div>
+            </div>
+          </div>
+        </td>
+        <td><span class="level-badge-sm">Nv ${e.level || 1}</span></td>
+        <td class="rank-coins"><i class="fas fa-coins" style="color:var(--gold)"></i> ${(e.coins||0).toLocaleString("pt-BR")}</td>
+        <td>${badges}</td>
+      </tr>`;
+    }).join("");
   });
 }
 
