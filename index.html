@@ -6,155 +6,571 @@
   <title>RPG Quests ⚔️ - Login</title>
   <link rel="stylesheet" href="css/style.css"/>
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=MedievalSharp&family=Cinzel:wght@400;600;700&family=Cinzel+Decorative:wght@700&family=Lato:wght@300;400;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Cinzel+Decorative:wght@700&family=Lato:wght@300;400;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
   <style>
-    /* ── Overlay de loading inicial ──────────────── */
-    #pageLoader{
-      position:fixed;inset:0;background:var(--bg-primary,#0f0f1a);
-      display:flex;flex-direction:column;align-items:center;justify-content:center;
-      z-index:99999;transition:opacity .4s;
+    /* ═══════════════════════════════════════════════════════════
+       PAGE LOADER
+    ═══════════════════════════════════════════════════════════ */
+    #pageLoader {
+      position: fixed; inset: 0;
+      background: var(--bg-primary, #0f0f1a);
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      z-index: 99999; transition: opacity .5s ease;
     }
-    #pageLoader.hide{opacity:0;pointer-events:none;}
-    #pageLoader .loader-shield{font-size:3rem;color:var(--gold,#c9a84c);margin-bottom:1rem;
-      animation:shield-pulse 1.5s ease-in-out infinite;}
-    @keyframes shield-pulse{0%,100%{transform:scale(1);}50%{transform:scale(1.1);}}
-    #pageLoader p{color:var(--text-secondary,#aaa);font-family:'Cinzel',serif;font-size:.85rem;}
+    #pageLoader.hide { opacity: 0; pointer-events: none; }
+    .loader-shield {
+      font-size: 3.2rem; color: var(--gold, #c9a84c);
+      margin-bottom: 1rem;
+      animation: shield-pulse 1.4s ease-in-out infinite;
+    }
+    @keyframes shield-pulse {
+      0%, 100% { transform: scale(1); filter: drop-shadow(0 0 8px rgba(201,168,76,.4)); }
+      50%       { transform: scale(1.12); filter: drop-shadow(0 0 20px rgba(201,168,76,.8)); }
+    }
+    #pageLoader p {
+      color: var(--text-secondary, #aaa);
+      font-family: 'Cinzel', serif; font-size: .82rem;
+      letter-spacing: .1em;
+    }
 
-    /* ── Modais de autenticação ───────────────────── */
-    .auth-overlay{
-      display:none;position:fixed;inset:0;background:rgba(0,0,0,.8);
-      z-index:9999;align-items:center;justify-content:center;
-      backdrop-filter:blur(6px);
+    /* ═══════════════════════════════════════════════════════════
+       AUTH OVERLAY & BOX
+    ═══════════════════════════════════════════════════════════ */
+    .auth-overlay {
+      display: flex; position: fixed; inset: 0;
+      background: rgba(0,0,0,.75);
+      z-index: 9999; align-items: center; justify-content: center;
+      backdrop-filter: blur(8px);
+      padding: 16px;
+      opacity: 0; pointer-events: none;
+      transition: opacity .22s ease;
     }
-    .auth-overlay.open{display:flex;}
-    .auth-box{
-      background:var(--surface,#1a1a2e);
-      border:1px solid var(--gold,#c9a84c);
-      border-radius:16px;padding:2rem 2.2rem;
-      width:min(440px,94vw);position:relative;
-      box-shadow:0 0 60px rgba(201,168,76,.2);
+    .auth-overlay.open { opacity: 1; pointer-events: all; }
+
+    .auth-box {
+      background: #12122a;
+      border: 1px solid rgba(201,168,76,.35);
+      border-radius: 20px;
+      padding: 2rem 2.2rem 1.8rem;
+      width: min(460px, 100%);
+      position: relative;
+      box-shadow: 0 0 80px rgba(201,168,76,.15), 0 30px 60px rgba(0,0,0,.5);
+      animation: box-in .3s cubic-bezier(.34,1.56,.64,1);
     }
-    .auth-box h2{
-      font-family:'Cinzel',serif;color:var(--gold,#c9a84c);
-      margin:0 0 .3rem;font-size:1.4rem;text-align:center;
+    @keyframes box-in {
+      from { opacity: 0; transform: scale(.88) translateY(20px); }
+      to   { opacity: 1; transform: scale(1)   translateY(0); }
     }
-    .auth-box .auth-subtitle{
-      text-align:center;color:var(--text-muted,#888);
-      font-size:.8rem;margin-bottom:1.4rem;
+    /* Shake on validation error */
+    @keyframes shake {
+      0%, 100% { transform: translateX(0); }
+      15%       { transform: translateX(-8px); }
+      30%       { transform: translateX( 7px); }
+      45%       { transform: translateX(-6px); }
+      60%       { transform: translateX( 5px); }
+      75%       { transform: translateX(-3px); }
+      90%       { transform: translateX( 2px); }
     }
-    .auth-box .form-group{margin-bottom:.9rem;}
-    .auth-box label{
-      display:block;font-size:.75rem;color:var(--text-muted,#aaa);
-      margin-bottom:.3rem;text-transform:uppercase;letter-spacing:.06em;
+    .shake { animation: shake .45s cubic-bezier(.36,.07,.19,.97) both; }
+    /* Pop-in for success circle */
+    @keyframes pop-in {
+      from { transform: scale(0); opacity: 0; }
+      to   { transform: scale(1); opacity: 1; }
     }
+    /* Bouncing dots loader */
+    @keyframes dot-bounce {
+      0%, 100% { transform: translateY(0); opacity: .4; }
+      50%       { transform: translateY(-4px); opacity: 1; }
+    }
+
+    /* Header */
+    .auth-header {
+      text-align: center; margin-bottom: 1.6rem;
+    }
+    .auth-icon {
+      font-size: 2.2rem; margin-bottom: .5rem; display: block;
+      filter: drop-shadow(0 0 12px rgba(201,168,76,.6));
+    }
+    .auth-box h2 {
+      font-family: 'Cinzel', serif;
+      color: var(--gold, #c9a84c);
+      margin: 0 0 .25rem; font-size: 1.45rem;
+    }
+    .auth-subtitle {
+      color: var(--text-muted, #888);
+      font-size: .8rem;
+    }
+
+    /* Close button */
+    .close-btn {
+      position: absolute; top: .9rem; right: .9rem;
+      background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.1);
+      border-radius: 8px; color: var(--text-muted, #888);
+      cursor: pointer; width: 32px; height: 32px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: .9rem; transition: all .15s;
+    }
+    .close-btn:hover { background: rgba(255,255,255,.12); color: #fff; }
+
+    /* Form groups */
+    .form-group { margin-bottom: .95rem; }
+    .form-group label {
+      display: flex; align-items: center; gap: 6px;
+      font-size: .72rem; color: var(--text-muted, #aaa);
+      margin-bottom: .35rem;
+      text-transform: uppercase; letter-spacing: .07em; font-weight: 600;
+    }
+    .form-group label i { font-size: .75rem; color: var(--gold, #c9a84c); }
+
+    /* Inputs */
     .auth-box input[type=text],
     .auth-box input[type=email],
-    .auth-box input[type=password]{
-      width:100%;padding:.7rem 1rem;border-radius:8px;
-      border:1px solid var(--border,#2a2a3e);
-      background:var(--bg-primary,#0f0f1a);
-      color:#fff;font-size:.95rem;box-sizing:border-box;
-      transition:border-color .2s;
+    .auth-box input[type=password] {
+      width: 100%; padding: .72rem 1rem;
+      border-radius: 10px;
+      border: 1.5px solid rgba(255,255,255,.1);
+      background: rgba(0,0,0,.3);
+      color: #fff; font-size: .93rem;
+      box-sizing: border-box;
+      transition: border-color .2s, box-shadow .2s;
     }
-    .auth-box input:focus{outline:none;border-color:var(--gold,#c9a84c);}
-    /* Password wrapper with toggle eye icon */
-    .password-wrap{position:relative;}
-    .password-wrap input{padding-right:2.6rem!important;}
-    .btn-eye{
-      position:absolute;right:.7rem;top:50%;transform:translateY(-50%);
-      background:none;border:none;color:var(--text-muted,#888);cursor:pointer;
-      font-size:1rem;padding:2px;display:flex;align-items:center;
+    .auth-box input:focus {
+      outline: none;
+      border-color: var(--gold, #c9a84c);
+      box-shadow: 0 0 0 3px rgba(201,168,76,.18), 0 2px 8px rgba(201,168,76,.08);
+      transform: translateY(-1px);
+      transition: border-color .2s, box-shadow .2s, transform .15s;
     }
-    .btn-eye:hover{color:#fff;}
-    .auth-box .btn-auth-primary{
-      width:100%;padding:.85rem;border:none;border-radius:10px;
-      font-family:'Cinzel',serif;font-size:1rem;font-weight:700;
-      cursor:pointer;margin-top:.4rem;transition:all .2s;
-      background:linear-gradient(135deg,#b8922a,#c9a84c);color:#0f0f1a;
-      display:flex;align-items:center;justify-content:center;gap:8px;
+    .auth-box input.input-error {
+      border-color: #f87171 !important;
+      box-shadow: 0 0 0 3px rgba(248,113,113,.12) !important;
     }
-    .auth-box .btn-auth-primary:hover:not(:disabled){
-      filter:brightness(1.12);transform:translateY(-2px);
-      box-shadow:0 6px 20px rgba(201,168,76,.35);
+    .auth-box input.input-ok {
+      border-color: #4ade80;
+      box-shadow: 0 0 0 3px rgba(74,222,128,.1);
     }
-    .auth-box .btn-auth-primary:disabled{opacity:.6;cursor:not-allowed;}
-    .auth-error{
-      background:rgba(255,60,60,.1);border:1px solid rgba(255,80,80,.3);
-      color:#ff7070;border-radius:8px;padding:.6rem .9rem;
-      font-size:.82rem;margin-bottom:.9rem;display:none;
-    }
-    .auth-error.show{display:block;}
-    .auth-switch{
-      text-align:center;margin-top:1rem;font-size:.82rem;
-      color:var(--text-muted,#888);
-    }
-    .auth-switch a{color:var(--gold,#c9a84c);cursor:pointer;text-decoration:underline;}
-    .auth-box .close-btn{
-      position:absolute;top:.7rem;right:.7rem;background:none;border:none;
-      color:var(--text-muted,#888);cursor:pointer;font-size:1.1rem;padding:4px;
-    }
-    .auth-box .close-btn:hover{color:#fff;}
-    /* Remember me row */
-    .remember-row{
-      display:flex;align-items:center;justify-content:space-between;
-      margin:.5rem 0 .9rem;font-size:.8rem;color:var(--text-muted,#aaa);
-    }
-    .remember-row label{display:flex;align-items:center;gap:6px;cursor:pointer;}
-    .remember-row input[type=checkbox]{width:15px;height:15px;cursor:pointer;accent-color:var(--gold,#c9a84c);}
-    .remember-row a{color:var(--gold,#c9a84c);cursor:pointer;text-decoration:underline;font-size:.78rem;}
+    .auth-box input::placeholder { color: rgba(255,255,255,.3); }
 
-    /* ── Botões na login card ──────────────────── */
-    .login-actions{display:flex;flex-direction:column;gap:.7rem;width:100%;}
-    .btn-login-email{
-      display:flex;align-items:center;justify-content:center;gap:8px;
-      padding:.85rem 1.2rem;border-radius:10px;border:none;
-      background:linear-gradient(135deg,#b8922a,#c9a84c);
-      color:#0f0f1a;font-family:'Cinzel',serif;font-weight:700;
-      font-size:.95rem;cursor:pointer;transition:all .2s;width:100%;
+    /* Password wrap */
+    .password-wrap { position: relative; }
+    .password-wrap input { padding-right: 2.8rem !important; }
+    .btn-eye {
+      position: absolute; right: .8rem; top: 50%; transform: translateY(-50%);
+      background: none; border: none; color: rgba(255,255,255,.35);
+      cursor: pointer; font-size: .95rem; padding: 4px;
+      display: flex; align-items: center; transition: color .15s;
     }
-    .btn-login-email:hover{filter:brightness(1.1);transform:translateY(-2px);}
-    .btn-register{
-      display:flex;align-items:center;justify-content:center;gap:8px;
-      padding:.85rem 1.2rem;border-radius:10px;
-      border:1px solid var(--gold,#c9a84c);
-      background:transparent;color:var(--gold,#c9a84c);
-      font-family:'Cinzel',serif;font-weight:600;
-      font-size:.95rem;cursor:pointer;transition:all .2s;width:100%;
-    }
-    .btn-register:hover{background:rgba(201,168,76,.1);}
-    .spin-icon{animation:spin .8s linear infinite;display:inline-block;}
-    @keyframes spin{to{transform:rotate(360deg);}}
+    .btn-eye:hover { color: var(--gold, #c9a84c); }
 
-    /* ── Timer de sessão (toast especial) ────── */
-    #sessionTimerBanner{
-      display:none;position:fixed;bottom:1rem;left:50%;transform:translateX(-50%);
-      background:rgba(201,168,76,.15);border:1px solid rgba(201,168,76,.4);
-      color:var(--gold,#c9a84c);border-radius:10px;padding:.5rem 1.2rem;
-      font-size:.82rem;z-index:9998;gap:8px;align-items:center;
+    /* Inline field hint */
+    .field-hint {
+      font-size: .7rem; margin-top: .3rem;
+      min-height: 16px; display: flex; align-items: center; gap: 4px;
     }
-    #sessionTimerBanner.show{display:flex;}
+    .field-hint.err  { color: #f87171; }
+    .field-hint.ok   { color: #4ade80; }
+    .field-hint.info { color: var(--text-muted, #888); }
+
+    /* Password strength bar */
+    .pwd-strength-wrap {
+      margin-top: .35rem; display: none;
+    }
+    .pwd-strength-wrap.visible { display: block; }
+    .pwd-strength-bar {
+      height: 4px; border-radius: 99px;
+      background: rgba(255,255,255,.08);
+      overflow: hidden; margin-bottom: .3rem;
+    }
+    .pwd-strength-fill {
+      height: 100%; border-radius: 99px;
+      transition: width .3s, background .3s;
+    }
+    .pwd-strength-label {
+      font-size: .68rem; font-weight: 700; letter-spacing: .04em;
+    }
+    /* strength levels */
+    .str-0 .pwd-strength-fill { width: 0%;   background: transparent; }
+    .str-1 .pwd-strength-fill { width: 25%;  background: #f87171; }
+    .str-2 .pwd-strength-fill { width: 50%;  background: #fb923c; }
+    .str-3 .pwd-strength-fill { width: 75%;  background: #facc15; }
+    .str-4 .pwd-strength-fill { width: 100%; background: #4ade80; }
+    .str-1 .pwd-strength-label { color: #f87171; }
+    .str-2 .pwd-strength-label { color: #fb923c; }
+    .str-3 .pwd-strength-label { color: #facc15; }
+    .str-4 .pwd-strength-label { color: #4ade80; }
+
+    /* Remember-me row */
+    .remember-row {
+      display: flex; align-items: center; justify-content: space-between;
+      margin: .6rem 0 1rem; font-size: .8rem;
+    }
+    .remember-row label {
+      display: flex; align-items: center; gap: 7px;
+      color: var(--text-muted, #aaa); cursor: pointer;
+      font-size: .8rem !important; text-transform: none !important;
+      letter-spacing: normal !important; font-weight: 400 !important;
+    }
+    .remember-row input[type=checkbox] {
+      width: 15px; height: 15px; cursor: pointer;
+      accent-color: var(--gold, #c9a84c); flex-shrink: 0;
+    }
+    .forgot-link {
+      color: var(--gold, #c9a84c); cursor: pointer;
+      font-size: .78rem; text-decoration: none;
+      border-bottom: 1px dashed rgba(201,168,76,.4);
+      transition: border-color .2s;
+    }
+    .forgot-link:hover { border-color: var(--gold, #c9a84c); }
+
+    /* Error banner */
+    .auth-error {
+      display: none;
+      background: rgba(248,113,113,.1);
+      border: 1px solid rgba(248,113,113,.3);
+      border-radius: 10px; padding: .6rem .9rem;
+      font-size: .82rem; color: #fca5a5;
+      margin-bottom: .9rem;
+      gap: 8px; align-items: flex-start;
+    }
+    .auth-error.show { display: flex; }
+    .auth-error i { color: #f87171; margin-top: 2px; flex-shrink: 0; }
+
+    /* Success banner */
+    .auth-success {
+      display: none;
+      background: rgba(74,222,128,.08);
+      border: 1px solid rgba(74,222,128,.25);
+      border-radius: 10px; padding: .65rem .9rem;
+      font-size: .82rem; color: #86efac;
+      margin-bottom: .9rem;
+      gap: 8px; align-items: flex-start;
+    }
+    .auth-success.show { display: flex; }
+    .auth-success i { color: #4ade80; margin-top: 2px; flex-shrink: 0; }
+
+    /* Primary button */
+    .btn-auth-primary {
+      width: 100%; padding: .9rem;
+      border: none; border-radius: 12px;
+      font-family: 'Cinzel', serif; font-size: 1rem; font-weight: 700;
+      cursor: pointer; margin-top: .4rem; transition: all .2s;
+      background: linear-gradient(135deg, #b8922a, #c9a84c, #e8c96a);
+      background-size: 200% auto;
+      color: #0f0f1a;
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+      position: relative; overflow: hidden;
+      letter-spacing: .04em;
+    }
+    .btn-auth-primary::before {
+      content: ''; position: absolute; inset: 0;
+      background: linear-gradient(135deg, transparent 30%, rgba(255,255,255,.2) 50%, transparent 70%);
+      transform: translateX(-100%); transition: transform .4s;
+    }
+    .btn-auth-primary:hover:not(:disabled)::before { transform: translateX(100%); }
+    .btn-auth-primary:hover:not(:disabled) {
+      filter: brightness(1.1); transform: translateY(-2px);
+      box-shadow: 0 8px 24px rgba(201,168,76,.35);
+    }
+    .btn-auth-primary:active:not(:disabled) { transform: translateY(0); }
+    .btn-auth-primary:disabled {
+      opacity: .55; cursor: not-allowed; transform: none; filter: none;
+    }
+    .btn-auth-primary .spin-icon { animation: spin .7s linear infinite; display: inline-block; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* Secondary (ghost) button */
+    .btn-auth-ghost {
+      width: 100%; padding: .9rem;
+      border: 1.5px solid rgba(201,168,76,.5);
+      border-radius: 12px; background: transparent;
+      color: var(--gold, #c9a84c);
+      font-family: 'Cinzel', serif; font-weight: 600;
+      font-size: .95rem; cursor: pointer;
+      transition: all .2s; margin-top: .4rem;
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+    }
+    .btn-auth-ghost:hover { background: rgba(201,168,76,.1); transform: translateY(-1px); }
+
+    /* Divider */
+    .auth-divider {
+      display: flex; align-items: center; gap: 10px;
+      color: rgba(255,255,255,.2); font-size: .72rem;
+      margin: 1rem 0;
+    }
+    .auth-divider::before,
+    .auth-divider::after {
+      content: ''; flex: 1; height: 1px;
+      background: rgba(255,255,255,.1);
+    }
+
+    /* Switch link */
+    .auth-switch {
+      text-align: center; margin-top: 1.1rem;
+      font-size: .82rem; color: var(--text-muted, #888);
+    }
+    .auth-switch a {
+      color: var(--gold, #c9a84c); cursor: pointer;
+      text-decoration: underline; font-weight: 600;
+    }
+
+    /* Caps Lock warning */
+    .capslock-warn {
+      display: none; align-items: center; gap: 5px;
+      font-size: .7rem; color: #fb923c; margin-top: .25rem;
+    }
+    .capslock-warn.show { display: flex; }
+
+    /* Success circle (for forgot step 2) */
+    .success-circle {
+      width: 64px; height: 64px; border-radius: 50%;
+      background: rgba(74,222,128,.1); border: 2px solid #4ade80;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.8rem; margin: 0 auto 1rem;
+      animation: pop-in .4s cubic-bezier(.34,1.56,.64,1);
+    }
+
+    /* Dot loader */
+    .dot-loader {
+      display: inline-flex; gap: 3px; align-items: center;
+    }
+    .dot-loader span {
+      width: 5px; height: 5px; background: currentColor;
+      border-radius: 50%; animation: dot-bounce .9s ease-in-out infinite;
+    }
+    .dot-loader span:nth-child(2) { animation-delay: .15s; }
+    .dot-loader span:nth-child(3) { animation-delay: .30s; }
+
+    /* ═══════════════════════════════════════════════════════════
+       FORGOT PASSWORD MODAL
+    ═══════════════════════════════════════════════════════════ */
+    #forgotOverlay .auth-box { max-width: 420px; }
+
+    .forgot-steps {
+      display: flex; gap: 6px; margin-bottom: 1.4rem;
+      justify-content: center;
+    }
+    .forgot-step {
+      width: 28px; height: 4px; border-radius: 99px;
+      background: rgba(255,255,255,.1); transition: background .3s;
+    }
+    .forgot-step.active { background: var(--gold, #c9a84c); }
+
+    /* ═══════════════════════════════════════════════════════════
+       LOGIN PAGE LAYOUT
+    ═══════════════════════════════════════════════════════════ */
+    body.login-page {
+      min-height: 100vh;
+      display: flex; align-items: center; justify-content: center;
+      background: var(--bg-primary, #0f0f1a);
+      overflow-x: hidden;
+    }
+
+    /* Particles */
+    .particles { position: fixed; inset: 0; pointer-events: none; z-index: 0; overflow: hidden; }
+    .particle {
+      position: absolute; bottom: -10px; border-radius: 50%;
+      background: var(--gold, #c9a84c);
+      animation: float-up linear infinite;
+    }
+    @keyframes float-up {
+      0%   { bottom: -10px; opacity: 0; }
+      10%  { opacity: 1; }
+      90%  { opacity: .6; }
+      100% { bottom: 110vh; opacity: 0; transform: translateX(30px); }
+    }
+
+    .login-container {
+      position: relative; z-index: 1;
+      display: flex; flex-direction: column;
+      align-items: center; gap: 2rem;
+      padding: 2.5rem 1rem 3rem;
+      width: 100%; max-width: 900px;
+    }
+
+    /* Logo */
+    .login-logo { text-align: center; }
+    .shield-icon {
+      width: 80px; height: 80px; margin: 0 auto 1rem;
+      border-radius: 20px;
+      background: linear-gradient(135deg, rgba(201,168,76,.15), rgba(201,168,76,.05));
+      border: 1px solid rgba(201,168,76,.3);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 2.2rem; color: var(--gold, #c9a84c);
+      box-shadow: 0 0 40px rgba(201,168,76,.2);
+    }
+    .game-title {
+      font-family: 'Cinzel Decorative', serif;
+      font-size: clamp(1.8rem, 6vw, 2.8rem);
+      color: var(--gold, #c9a84c); margin: 0;
+    }
+    .game-title span { color: #fff; }
+    .game-subtitle {
+      font-size: .85rem; color: var(--text-muted, #888);
+      margin: .5rem 0 0; letter-spacing: .05em;
+    }
+
+    /* Login card */
+    .login-card {
+      background: linear-gradient(160deg, #15152c, #0f0f1f);
+      border: 1px solid rgba(201,168,76,.25);
+      border-radius: 24px; padding: 2rem 2.2rem;
+      width: min(460px, 100%);
+      box-shadow: 0 0 60px rgba(201,168,76,.1), 0 20px 50px rgba(0,0,0,.4);
+      position: relative; overflow: hidden;
+    }
+    .card-glow {
+      position: absolute; top: -60px; left: 50%;
+      transform: translateX(-50%);
+      width: 300px; height: 120px;
+      background: radial-gradient(ellipse, rgba(201,168,76,.12) 0%, transparent 70%);
+      pointer-events: none;
+    }
+
+    .login-stats-preview {
+      display: flex; gap: 8px; margin-bottom: 1.2rem;
+    }
+    .stat-item {
+      flex: 1; display: flex; align-items: center; gap: 6px;
+      padding: .55rem .6rem; border-radius: 10px;
+      background: rgba(255,255,255,.04);
+      border: 1px solid rgba(255,255,255,.07);
+      font-size: .72rem; color: var(--text-muted, #aaa);
+    }
+    .stat-item i { color: var(--gold, #c9a84c); font-size: .8rem; }
+
+    .login-divider {
+      text-align: center; font-size: .72rem;
+      color: rgba(255,255,255,.25);
+      margin: 1.1rem 0;
+      display: flex; align-items: center; gap: 10px;
+    }
+    .login-divider::before, .login-divider::after {
+      content: ''; flex: 1; height: 1px; background: rgba(255,255,255,.08);
+    }
+
+    .login-actions { display: flex; flex-direction: column; gap: .7rem; width: 100%; }
+
+    .btn-login-email {
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+      padding: .92rem 1.2rem; border-radius: 12px; border: none;
+      background: linear-gradient(135deg, #b8922a, #c9a84c);
+      color: #0f0f1a; font-family: 'Cinzel', serif; font-weight: 700;
+      font-size: .95rem; cursor: pointer; transition: all .2s; width: 100%;
+      letter-spacing: .04em;
+    }
+    .btn-login-email:hover {
+      filter: brightness(1.1); transform: translateY(-2px);
+      box-shadow: 0 8px 24px rgba(201,168,76,.3);
+    }
+
+    .btn-register {
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+      padding: .92rem 1.2rem; border-radius: 12px;
+      border: 1.5px solid rgba(201,168,76,.45);
+      background: transparent; color: var(--gold, #c9a84c);
+      font-family: 'Cinzel', serif; font-weight: 600;
+      font-size: .95rem; cursor: pointer; transition: all .2s; width: 100%;
+    }
+    .btn-register:hover { background: rgba(201,168,76,.1); transform: translateY(-1px); }
+
+    .login-disclaimer {
+      text-align: center; font-size: .72rem;
+      color: rgba(255,255,255,.25); margin-top: 1rem;
+      display: flex; align-items: center; justify-content: center; gap: 5px;
+    }
+    .login-disclaimer i { color: #4ade80; }
+
+    /* Features */
+    .login-features {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 12px; width: min(700px, 100%);
+    }
+    .feature-card {
+      background: rgba(255,255,255,.03);
+      border: 1px solid rgba(255,255,255,.07);
+      border-radius: 16px; padding: 1.2rem 1.3rem;
+      text-align: center; transition: all .2s;
+    }
+    .feature-card:hover {
+      border-color: rgba(201,168,76,.2);
+      background: rgba(201,168,76,.04);
+      transform: translateY(-3px);
+    }
+    .feature-card i {
+      font-size: 1.5rem; color: var(--gold, #c9a84c);
+      margin-bottom: .6rem; display: block;
+    }
+    .feature-card h3 {
+      font-family: 'Cinzel', serif; font-size: .85rem;
+      color: var(--text-primary, #fff); margin: 0 0 .4rem;
+    }
+    .feature-card p { font-size: .75rem; color: var(--text-muted, #888); margin: 0; }
+
+    /* Session timer banner */
+    #sessionTimerBanner {
+      display: none; position: fixed; bottom: 1rem; left: 50%;
+      transform: translateX(-50%);
+      background: rgba(201,168,76,.12); border: 1px solid rgba(201,168,76,.35);
+      color: var(--gold, #c9a84c); border-radius: 12px;
+      padding: .55rem 1.4rem; font-size: .82rem;
+      z-index: 9998; gap: 8px; align-items: center;
+    }
+    #sessionTimerBanner.show { display: flex; }
+
+    /* Toast */
+    .toast-container {
+      position: fixed; bottom: 24px; right: 24px;
+      z-index: 20000; display: flex; flex-direction: column; gap: 8px;
+    }
+    .toast {
+      display: flex; align-items: center; gap: 10px;
+      padding: 14px 18px; border-radius: 12px;
+      background: #1a1a2e; border: 1px solid rgba(255,255,255,.1);
+      box-shadow: 0 8px 30px rgba(0,0,0,.4);
+      min-width: 280px; max-width: 380px;
+      animation: toast-in .3s ease, toast-out .3s ease 3s forwards;
+      font-size: .875rem; color: #fff;
+    }
+    .toast.success { border-left: 4px solid #4ade80; }
+    .toast.error   { border-left: 4px solid #f87171; }
+    .toast.warning { border-left: 4px solid #fb923c; }
+    .toast.info    { border-left: 4px solid #60a5fa; }
+    .toast.success i { color: #4ade80; }
+    .toast.error   i { color: #f87171; }
+    .toast.warning i { color: #fb923c; }
+    .toast.info    i { color: #60a5fa; }
+    @keyframes toast-in  { from { opacity:0; transform:translateX(100%); } to { opacity:1; transform:translateX(0); } }
+    @keyframes toast-out { from { opacity:1; } to { opacity:0; transform:translateX(100%); } }
+
+    /* Responsive */
+    @media (max-width: 480px) {
+      .auth-box { padding: 1.6rem 1.4rem; }
+      .login-card { padding: 1.5rem 1.2rem; }
+      .stat-item span { display: none; }
+      .login-stats-preview { gap: 6px; }
+    }
   </style>
 </head>
 <body class="login-page">
 
-  <!-- ── Loader inicial ─────────────────────────────────────── -->
+  <!-- ── Loader ──────────────────────────────────────────────── -->
   <div id="pageLoader">
     <div class="loader-shield"><i class="fas fa-shield-halved"></i></div>
     <p>Carregando RPG Quests…</p>
   </div>
 
-  <!-- ── Partículas de fundo ────────────────────────────────── -->
+  <!-- ── Partículas ──────────────────────────────────────────── -->
   <div class="particles" id="particles"></div>
 
-  <!-- ── Container principal ───────────────────────────────── -->
+  <!-- ── Container principal ─────────────────────────────────── -->
   <div class="login-container">
 
-    <!-- Logo / Brasão -->
+    <!-- Logo -->
     <div class="login-logo">
-      <div class="shield-icon">
-        <i class="fas fa-shield-halved"></i>
-      </div>
+      <div class="shield-icon"><i class="fas fa-shield-halved"></i></div>
       <h1 class="game-title">RPG <span>Quests</span></h1>
       <p class="game-subtitle">⚔️ Complete missões. Ganhe recompensas. Conquiste o ranking. ⚔️</p>
     </div>
@@ -166,29 +582,25 @@
       <div class="login-stats-preview">
         <div class="stat-item"><i class="fas fa-scroll"></i><span>Quests Épicas</span></div>
         <div class="stat-item"><i class="fas fa-trophy"></i><span>Rankings Globais</span></div>
-        <div class="stat-item"><i class="fas fa-coins"></i><span>Recompensas</span></div>
+        <div class="stat-item"><i class="fas fa-medal"></i><span>Conquistas</span></div>
       </div>
 
       <div class="login-divider"><span>Escolha como entrar</span></div>
 
-      <!-- Ações de login -->
       <div class="login-actions">
-        <!-- E-mail login -->
         <button class="btn-login-email" id="openLoginBtn" type="button">
           <i class="fas fa-envelope"></i>
           <span>Entrar com E-mail</span>
         </button>
-
-        <!-- Cadastrar-se -->
         <button class="btn-register" id="openRegisterBtn" type="button">
           <i class="fas fa-user-plus"></i>
-          <span>Cadastrar-se</span>
+          <span>Criar conta gratuita</span>
         </button>
       </div>
 
-      <p class="login-disclaimer" style="margin-top:1rem">
+      <p class="login-disclaimer">
         <i class="fas fa-lock"></i>
-        Login seguro via Firebase Auth. Nunca pedimos sua senha do Discord.
+        Login seguro via Firebase Auth — seus dados estão protegidos
       </p>
     </div>
 
@@ -197,52 +609,67 @@
       <div class="feature-card">
         <i class="fas fa-dragon"></i>
         <h3>Quests Diárias</h3>
-        <p>Complete missões e ganhe moedas todos os dias</p>
+        <p>Complete missões e ganhe moedas todos os dias com reset automático</p>
       </div>
       <div class="feature-card">
         <i class="fas fa-chart-line"></i>
         <h3>Ranking em Tempo Real</h3>
-        <p>Diário, semanal e mensal com reset automático</p>
+        <p>Diário, semanal e mensal — veja sua posição ao vivo</p>
       </div>
       <div class="feature-card">
         <i class="fas fa-medal"></i>
-        <h3>Sistema de XP</h3>
-        <p>Suba de nível e desbloqueie quests exclusivas</p>
+        <h3>22+ Conquistas</h3>
+        <p>Desbloqueie badges por progresso, nível e eventos especiais</p>
       </div>
     </div>
   </div>
 
-  <!-- ════════════════════════════════════════════════════════
+  <!-- ═══════════════════════════════════════════════════════════
        MODAL: LOGIN (E-mail + Senha)
-  ═════════════════════════════════════════════════════════ -->
+  ═══════════════════════════════════════════════════════════ -->
   <div class="auth-overlay" id="loginOverlay">
     <div class="auth-box">
-      <button class="close-btn" id="closeLogin"><i class="fas fa-times"></i></button>
-      <h2>⚔️ Entrar</h2>
-      <p class="auth-subtitle">Bem-vindo de volta, aventureiro!</p>
-      <div class="auth-error" id="loginError"></div>
+      <button class="close-btn" id="closeLogin" aria-label="Fechar"><i class="fas fa-times"></i></button>
+
+      <div class="auth-header">
+        <span class="auth-icon">⚔️</span>
+        <h2>Entrar na Guilda</h2>
+        <p class="auth-subtitle">Bem-vindo de volta, aventureiro!</p>
+      </div>
+
+      <div class="auth-error" id="loginError">
+        <i class="fas fa-exclamation-circle"></i>
+        <span id="loginErrorMsg"></span>
+      </div>
 
       <div class="form-group">
         <label><i class="fas fa-envelope"></i> E-mail</label>
-        <input type="email" id="loginEmail" placeholder="seu@email.com" autocomplete="email"/>
+        <input type="email" id="loginEmail" placeholder="seu@email.com"
+               autocomplete="email" inputmode="email"/>
+        <div class="field-hint info" id="loginEmailHint"></div>
       </div>
+
       <div class="form-group">
         <label><i class="fas fa-lock"></i> Senha</label>
         <div class="password-wrap">
-          <input type="password" id="loginPassword" placeholder="••••••••" autocomplete="current-password"/>
-          <button class="btn-eye" type="button" id="toggleLoginPwd" title="Mostrar/Ocultar senha">
+          <input type="password" id="loginPassword" placeholder="••••••••"
+                 autocomplete="current-password"/>
+          <button class="btn-eye" type="button" id="toggleLoginPwd" aria-label="Mostrar/ocultar senha">
             <i class="fas fa-eye" id="eyeLoginIcon"></i>
           </button>
         </div>
+        <div class="capslock-warn" id="loginCapsWarn"><i class="fas fa-exclamation-triangle"></i> Caps Lock ativado</div>
+        <div class="field-hint info" id="loginPwdHint"></div>
       </div>
 
-      <!-- Remember me + Forgot password -->
       <div class="remember-row">
         <label>
           <input type="checkbox" id="rememberMe" checked/>
-          Lembrar login (30 min)
+          Lembrar por 30 min
         </label>
-        <a id="forgotPasswordLink">Esqueci a senha</a>
+        <a class="forgot-link" id="forgotPasswordLink" tabindex="0" role="button">
+          <i class="fas fa-key" style="font-size:.7rem;margin-right:3px"></i>Esqueci a senha
+        </a>
       </div>
 
       <button class="btn-auth-primary" id="submitLoginBtn" type="button">
@@ -250,46 +677,71 @@
       </button>
 
       <div class="auth-switch">
-        Não tem conta? <a id="goToRegister">Cadastre-se aqui</a>
+        Não tem conta? <a id="goToRegister">Criar conta grátis</a>
       </div>
     </div>
   </div>
 
-  <!-- ════════════════════════════════════════════════════════
+  <!-- ═══════════════════════════════════════════════════════════
        MODAL: CADASTRO
-  ═════════════════════════════════════════════════════════ -->
+  ═══════════════════════════════════════════════════════════ -->
   <div class="auth-overlay" id="registerOverlay">
     <div class="auth-box">
-      <button class="close-btn" id="closeRegister"><i class="fas fa-times"></i></button>
-      <h2>🛡️ Criar Conta</h2>
-      <p class="auth-subtitle">Junte-se à guilda de aventureiros!</p>
-      <div class="auth-error" id="registerError"></div>
+      <button class="close-btn" id="closeRegister" aria-label="Fechar"><i class="fas fa-times"></i></button>
+
+      <div class="auth-header">
+        <span class="auth-icon">🛡️</span>
+        <h2>Criar Conta</h2>
+        <p class="auth-subtitle">Junte-se à guilda de aventureiros!</p>
+      </div>
+
+      <div class="auth-error" id="registerError">
+        <i class="fas fa-exclamation-circle"></i>
+        <span id="registerErrorMsg"></span>
+      </div>
 
       <div class="form-group">
         <label><i class="fas fa-user"></i> Nome de Aventureiro</label>
-        <input type="text" id="regName" placeholder="Ex: KayhamWarrior" autocomplete="nickname" maxlength="30"/>
+        <input type="text" id="regName" placeholder="Ex: KayhamWarrior"
+               autocomplete="nickname" maxlength="30"/>
+        <div class="field-hint info" id="regNameHint">Entre 2 e 30 caracteres</div>
       </div>
+
       <div class="form-group">
         <label><i class="fas fa-envelope"></i> E-mail</label>
-        <input type="email" id="regEmail" placeholder="seu@email.com" autocomplete="email"/>
+        <input type="email" id="regEmail" placeholder="seu@email.com"
+               autocomplete="email" inputmode="email"/>
+        <div class="field-hint info" id="regEmailHint"></div>
       </div>
+
       <div class="form-group">
-        <label><i class="fas fa-lock"></i> Senha <small>(mín. 6 caracteres)</small></label>
+        <label><i class="fas fa-lock"></i> Senha <small style="font-weight:400;text-transform:none;letter-spacing:0">(mín. 6 caracteres)</small></label>
         <div class="password-wrap">
-          <input type="password" id="regPassword" placeholder="••••••••" autocomplete="new-password"/>
-          <button class="btn-eye" type="button" id="toggleRegPwd" title="Mostrar/Ocultar senha">
+          <input type="password" id="regPassword" placeholder="••••••••"
+                 autocomplete="new-password"/>
+          <button class="btn-eye" type="button" id="toggleRegPwd" aria-label="Mostrar/ocultar senha">
             <i class="fas fa-eye" id="eyeRegIcon"></i>
           </button>
         </div>
+        <div class="capslock-warn" id="regCapsWarn"><i class="fas fa-exclamation-triangle"></i> Caps Lock ativado</div>
+        <!-- Strength bar -->
+        <div class="pwd-strength-wrap str-0" id="pwdStrengthWrap">
+          <div class="pwd-strength-bar"><div class="pwd-strength-fill"></div></div>
+          <span class="pwd-strength-label" id="pwdStrengthLabel">Digite uma senha</span>
+        </div>
+        <div class="field-hint info" id="regPwdHint"></div>
       </div>
+
       <div class="form-group">
-        <label><i class="fas fa-lock"></i> Confirmar Senha</label>
+        <label><i class="fas fa-check-double"></i> Confirmar Senha</label>
         <div class="password-wrap">
-          <input type="password" id="regConfirm" placeholder="••••••••" autocomplete="new-password"/>
-          <button class="btn-eye" type="button" id="toggleRegConfirm" title="Mostrar/Ocultar senha">
+          <input type="password" id="regConfirm" placeholder="••••••••"
+                 autocomplete="new-password"/>
+          <button class="btn-eye" type="button" id="toggleRegConfirm" aria-label="Mostrar/ocultar senha">
             <i class="fas fa-eye" id="eyeRegConfirmIcon"></i>
           </button>
         </div>
+        <div class="field-hint" id="regConfirmHint"></div>
       </div>
 
       <button class="btn-auth-primary" id="submitRegisterBtn" type="button">
@@ -302,15 +754,102 @@
     </div>
   </div>
 
-  <!-- ── Toast container ────────────────────────────────────── -->
+  <!-- ═══════════════════════════════════════════════════════════
+       MODAL: ESQUECI A SENHA
+  ═══════════════════════════════════════════════════════════ -->
+  <div class="auth-overlay" id="forgotOverlay">
+    <div class="auth-box">
+      <button class="close-btn" id="closeForgot" aria-label="Fechar"><i class="fas fa-times"></i></button>
+
+      <!-- Step indicators -->
+      <div class="forgot-steps">
+        <div class="forgot-step active" id="fstep1"></div>
+        <div class="forgot-step"        id="fstep2"></div>
+      </div>
+
+      <!-- Step 1: enter email -->
+      <div id="forgotStep1">
+        <div class="auth-header">
+          <span class="auth-icon">🔑</span>
+          <h2>Recuperar Senha</h2>
+          <p class="auth-subtitle">Digite o e-mail da sua conta para receber o link de redefinição</p>
+        </div>
+
+        <div class="auth-error" id="forgotError">
+          <i class="fas fa-exclamation-circle"></i>
+          <span id="forgotErrorMsg"></span>
+        </div>
+
+        <div class="form-group">
+          <label><i class="fas fa-envelope"></i> E-mail da conta</label>
+          <input type="email" id="forgotEmail" placeholder="seu@email.com"
+                 autocomplete="email" inputmode="email"/>
+          <div class="field-hint info" id="forgotEmailHint"></div>
+        </div>
+
+        <button class="btn-auth-primary" id="sendResetBtn" type="button">
+          <i class="fas fa-paper-plane"></i> Enviar Link de Redefinição
+        </button>
+
+        <div class="auth-divider"><span>ou</span></div>
+
+        <button class="btn-auth-ghost" id="backToLoginBtn" type="button">
+          <i class="fas fa-arrow-left"></i> Voltar ao Login
+        </button>
+      </div>
+
+      <!-- Step 2: email sent confirmation -->
+      <div id="forgotStep2" style="display:none">
+        <div class="auth-header">
+          <div class="success-circle">📧</div>
+          <h2>E-mail Enviado!</h2>
+          <p class="auth-subtitle">Verifique sua caixa de entrada (e spam) para redefinir a senha</p>
+        </div>
+
+        <div class="auth-success show" style="display:flex;margin-bottom:1.2rem">
+          <i class="fas fa-check-circle"></i>
+          <span id="forgotSentMsg">Link enviado com sucesso!</span>
+        </div>
+
+        <div style="background:rgba(255,255,255,.04);border-radius:12px;padding:1rem;margin-bottom:1.2rem;font-size:.82rem;color:var(--text-muted,#888)">
+          <p style="margin:0 0 .5rem;display:flex;align-items:center;gap:6px">
+            <i class="fas fa-info-circle" style="color:var(--gold)"></i>
+            <strong style="color:#fff">Próximos passos:</strong>
+          </p>
+          <ol style="margin:0;padding-left:1.2rem;line-height:1.8">
+            <li>Abra o e-mail enviado para <strong id="forgotSentTo" style="color:var(--gold)"></strong></li>
+            <li>Clique no link <em>"Redefinir senha"</em></li>
+            <li>Defina uma nova senha e faça login</li>
+          </ol>
+        </div>
+
+        <button class="btn-auth-primary" id="forgotDoneBtn" type="button">
+          <i class="fas fa-check"></i> Entendido — Ir para o Login
+        </button>
+
+        <p style="text-align:center;font-size:.75rem;color:rgba(255,255,255,.2);margin-top:.9rem">
+          Não recebeu? Verifique o spam ou
+          <a id="resendResetLink" style="color:var(--gold);cursor:pointer;text-decoration:underline">reenviar e-mail</a>
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Session timer banner ─────────────────────────────────── -->
+  <div id="sessionTimerBanner">
+    <i class="fas fa-clock"></i>
+    <span id="sessionTimerText">Sessão expira em breve</span>
+  </div>
+
+  <!-- ── Toasts ─────────────────────────────────────────────── -->
   <div class="toast-container" id="toastContainer"></div>
 
-  <!-- ═══════════════════════════════════════════════════════
-       FIREBASE AUTH LOGIC — ES Module
-  ════════════════════════════════════════════════════════ -->
+  <!-- ═══════════════════════════════════════════════════════════
+       FIREBASE AUTH LOGIC
+  ═══════════════════════════════════════════════════════════ -->
   <script type="module">
-    import { initializeApp, getApps }      from "https://www.gstatic.com/firebasejs/12.10.0/firebase-app.js";
-    import { getAnalytics }                from "https://www.gstatic.com/firebasejs/12.10.0/firebase-analytics.js";
+    import { initializeApp, getApps } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-app.js";
+    import { getAnalytics }           from "https://www.gstatic.com/firebasejs/12.10.0/firebase-analytics.js";
     import {
       getAuth, onAuthStateChanged,
       signInWithEmailAndPassword,
@@ -325,7 +864,7 @@
       getDatabase, ref, get, set
     } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-database.js";
 
-    /* ── Config ─────────────────────────────────────── */
+    /* ── Config ─────────────────────────────────────────────── */
     const cfg = {
       apiKey:            "AIzaSyB9Tk0JEGdMgRQHVaS0zEd2Vy0Z1f-RU8Q",
       authDomain:        "marmota-rpg.firebaseapp.com",
@@ -336,97 +875,61 @@
       appId:             "1:1045625225684:web:e76bf77bb5c69665831641",
       measurementId:     "G-V0T2VYP0LQ"
     };
-    const ADMIN_UID = "F69XMBOumJSiuBvQm3c63HyJAjy2";
-    const SESSION_DURATION_MS = 30 * 60 * 1000; // 30 minutes
-    const SESSION_KEY = "rpg_session_expiry";
+    const ADMIN_UID          = "F69XMBOumJSiuBvQm3c63HyJAjy2";
+    const SESSION_DURATION   = 30 * 60 * 1000; // 30 min
+    const SESSION_KEY        = "rpg_session_expiry";
 
     const app  = getApps().length ? getApps()[0] : initializeApp(cfg);
     try { getAnalytics(app); } catch(_) {}
     const auth = getAuth(app);
     const db   = getDatabase(app);
 
-    /* ── Base path helper (GitHub Pages /repo/ vs raiz /) ─── */
+    /* ── Helpers ─────────────────────────────────────────────── */
+    const $ = id => document.getElementById(id);
+
     function basePath() {
-      const p = window.location.pathname;
-      const m = p.match(/^(\/[^/]+\/)/);
+      const m = window.location.pathname.match(/^(\/[^/]+\/)/);
       return (m && m[1] !== "/") ? m[1] : "/";
     }
     function goTo(page) { window.location.replace(basePath() + page); }
 
-    /* ── Loader hide ─────────────────────────────────── */
-    function hideLoader() {
-      document.getElementById("pageLoader").classList.add("hide");
-    }
+    /* ── Loader ──────────────────────────────────────────────── */
+    function hideLoader() { $("pageLoader").classList.add("hide"); }
 
-    /* ══════════════════════════════════════════════════════
-       SESSION TIMER (30-minute auto-logout)
-    ══════════════════════════════════════════════════════ */
-    function setSessionExpiry() {
-      const expiry = Date.now() + SESSION_DURATION_MS;
-      localStorage.setItem(SESSION_KEY, expiry.toString());
-    }
+    /* ── Session management ──────────────────────────────────── */
+    const setSessionExpiry    = () => localStorage.setItem(SESSION_KEY, (Date.now() + SESSION_DURATION).toString());
+    const clearSessionExpiry  = () => localStorage.removeItem(SESSION_KEY);
+    const isSessionExpired    = () => { const e = +localStorage.getItem(SESSION_KEY)||0; return e>0 && Date.now()>e; };
 
-    function getSessionExpiry() {
-      return parseInt(localStorage.getItem(SESSION_KEY) || "0");
-    }
-
-    function clearSessionExpiry() {
-      localStorage.removeItem(SESSION_KEY);
-    }
-
-    function isSessionExpired() {
-      const expiry = getSessionExpiry();
-      return expiry > 0 && Date.now() > expiry;
-    }
-
-    // Check session expiry when tab becomes visible
     document.addEventListener("visibilitychange", () => {
-      if (!document.hidden && isSessionExpired()) {
-        clearSessionExpiry();
-        auth.signOut().catch(() => {});
-      }
+      if (!document.hidden && isSessionExpired()) { clearSessionExpiry(); auth.signOut().catch(()=>{}); }
     });
+    setInterval(() => { if (isSessionExpired()) { clearSessionExpiry(); auth.signOut().catch(()=>{}); } }, 60_000);
 
-    // Periodic check every minute (relevant on home page, but harmless here)
-    setInterval(() => {
-      if (isSessionExpired()) {
-        clearSessionExpiry();
-        auth.signOut().catch(() => {});
-      }
-    }, 60_000);
-
-    /* ── Verificar se já está logado ─────────────────── */
+    /* ── Auth state change ───────────────────────────────────── */
     onAuthStateChanged(auth, user => {
       hideLoader();
       if (user) {
-        // Check if session has expired
-        if (isSessionExpired()) {
-          clearSessionExpiry();
-          auth.signOut();
-          return;
-        }
+        if (isSessionExpired()) { clearSessionExpiry(); auth.signOut(); return; }
         goTo("home.html");
       }
     });
 
-    /* ── Criar/Garantir perfil no DB ─────────────────── */
+    /* ── Ensure profile in DB ────────────────────────────────── */
     async function ensureProfile(user, name = null) {
       const r = ref(db, `users/${user.uid}`);
       const snap = await get(r);
       if (!snap.exists()) {
         const displayName = name || user.displayName || "Aventureiro";
         await set(r, {
-          uid:          user.uid,
-          email:        user.email || "",
-          username:     displayName,
-          nickname:     displayName,
-          photoURL:     user.photoURL || "",
-          iconUrl:      "",
-          coins:        0, xp: 0, level: 1,
-          role:         user.uid === ADMIN_UID ? "admin" : "user",
-          badges:       [],
-          coinsDaily:   0, coinsWeekly: 0, coinsMonthly: 0,
-          created_at:   Date.now()
+          uid: user.uid, email: user.email || "",
+          username: displayName, nickname: displayName,
+          photoURL: user.photoURL || "", iconUrl: "",
+          coins: 0, xp: 0, level: 1,
+          role: user.uid === ADMIN_UID ? "admin" : "user",
+          badges: [],
+          coinsDaily: 0, coinsWeekly: 0, coinsMonthly: 0,
+          created_at: Date.now()
         });
       } else if (user.uid === ADMIN_UID) {
         const d = snap.val();
@@ -434,9 +937,9 @@
       }
     }
 
-    /* ── Toast ───────────────────────────────────────── */
+    /* ── Toast ───────────────────────────────────────────────── */
     function toast(msg, type = "info") {
-      const c = document.getElementById("toastContainer");
+      const c = $("toastContainer");
       if (!c) return;
       const icons = { success:"fa-check-circle", error:"fa-times-circle",
                       warning:"fa-exclamation-triangle", info:"fa-info-circle" };
@@ -447,180 +950,395 @@
       setTimeout(() => el.remove(), 3800);
     }
 
-    /* ── Erro Firebase → PT-BR ───────────────────────── */
+    /* ── Firebase error → PT-BR ──────────────────────────────── */
     function fErr(code) {
-      const m = {
-        "auth/email-already-in-use":   "Este e-mail já está cadastrado.",
-        "auth/invalid-email":          "E-mail inválido.",
-        "auth/weak-password":          "Senha muito fraca (mínimo 6 caracteres).",
-        "auth/user-not-found":         "Usuário não encontrado.",
-        "auth/wrong-password":         "Senha incorreta.",
-        "auth/invalid-credential":     "E-mail ou senha incorretos.",
-        "auth/too-many-requests":      "Muitas tentativas. Aguarde.",
-        "auth/network-request-failed": "Sem conexão. Verifique a internet."
-      };
-      return m[code] || "Ocorreu um erro. Tente novamente.";
+      return ({
+        "auth/email-already-in-use":   "Este e-mail já está cadastrado. Tente fazer login.",
+        "auth/invalid-email":          "Formato de e-mail inválido.",
+        "auth/weak-password":          "Senha muito fraca. Use pelo menos 6 caracteres.",
+        "auth/user-not-found":         "Nenhuma conta encontrada com este e-mail.",
+        "auth/wrong-password":         "Senha incorreta. Tente novamente.",
+        "auth/invalid-credential":     "E-mail ou senha incorretos. Verifique e tente novamente.",
+        "auth/too-many-requests":      "Muitas tentativas. Aguarde alguns minutos.",
+        "auth/network-request-failed": "Sem conexão com a internet.",
+        "auth/user-disabled":          "Esta conta foi desativada.",
+      })[code] || "Ocorreu um erro inesperado. Tente novamente.";
     }
 
-    /* ── Botão loading ───────────────────────────────── */
-    function setLoading(btn, on, html) {
+    /* ── Button loading state ────────────────────────────────── */
+    function setLoading(btn, on, origHTML) {
       btn.disabled = on;
       btn.innerHTML = on
-        ? '<i class="fas fa-spinner spin-icon"></i> Aguarde...'
-        : html;
+        ? '<i class="fas fa-circle-notch spin-icon"></i> Aguarde...'
+        : origHTML;
     }
 
-    /* ── Mostrar erro no modal ───────────────────────── */
-    function showErr(id, msg) {
-      const el = document.getElementById(id);
+    /* ── Shake on error ───────────────────────────────────────── */
+    function shakeBox(overlayId) {
+      const box = document.querySelector(`#${overlayId} .auth-box`);
+      if (!box) return;
+      box.classList.remove("shake");
+      void box.offsetWidth; // reflow
+      box.classList.add("shake");
+      setTimeout(() => box.classList.remove("shake"), 500);
+    }
+
+    /* ── Show/hide error banners ─────────────────────────── */──── */
+    function showErr(prefix, msg) {
+      const el = $(prefix); const msgEl = $(prefix + "Msg");
+      if (msgEl) msgEl.textContent = msg;
+      el?.classList.add("show");
+      // Shake the containing modal box
+      const ov = el?.closest(".auth-overlay");
+      if (ov) {
+        const box = ov.querySelector(".auth-box");
+        if (box) { box.classList.remove("shake"); void box.offsetWidth; box.classList.add("shake"); }
+      }
+      setTimeout(() => el?.classList.remove("show"), 6000);
+    }
+    function hideErr(prefix) { $(prefix)?.classList.remove("show"); }
+
+    /* ── Field hint helpers ──────────────────────────────────── */
+    function hint(id, msg, type = "info") {
+      const el = $(id);
+      if (!el) return;
       el.textContent = msg;
-      el.classList.add("show");
-      setTimeout(() => el.classList.remove("show"), 5000);
+      el.className = `field-hint ${type}`;
     }
+    function clearHint(id) { hint(id, "", "info"); }
 
-    /* ── Show/Hide password toggle ───────────────────── */
-    function setupPasswordToggle(btnId, inputId, iconId) {
-      const btn   = document.getElementById(btnId);
-      const input = document.getElementById(inputId);
-      const icon  = document.getElementById(iconId);
-      if (!btn || !input || !icon) return;
+    /* ── Input state helpers ─────────────────────────────────── */
+    function inputOk(id)  { const el=$(id); el?.classList.remove("input-error"); el?.classList.add("input-ok"); }
+    function inputErr(id) { const el=$(id); el?.classList.remove("input-ok");    el?.classList.add("input-error"); }
+    function inputReset(id){ const el=$(id); el?.classList.remove("input-ok","input-error"); }
+
+    /* ── Password show/hide toggle ───────────────────────────── */
+    function setupEye(btnId, inputId, iconId) {
+      const btn = $(btnId), inp = $(inputId), ico = $(iconId);
+      if (!btn || !inp || !ico) return;
       btn.addEventListener("click", () => {
-        const show = input.type === "password";
-        input.type = show ? "text" : "password";
-        icon.classList.toggle("fa-eye",      !show);
-        icon.classList.toggle("fa-eye-slash", show);
+        const show = inp.type === "password";
+        inp.type = show ? "text" : "password";
+        ico.classList.toggle("fa-eye",       !show);
+        ico.classList.toggle("fa-eye-slash",  show);
       });
     }
-    setupPasswordToggle("toggleLoginPwd",    "loginPassword", "eyeLoginIcon");
-    setupPasswordToggle("toggleRegPwd",       "regPassword",   "eyeRegIcon");
-    setupPasswordToggle("toggleRegConfirm",   "regConfirm",    "eyeRegConfirmIcon");
+    setupEye("toggleLoginPwd",   "loginPassword", "eyeLoginIcon");
+    setupEye("toggleRegPwd",     "regPassword",   "eyeRegIcon");
+    setupEye("toggleRegConfirm", "regConfirm",     "eyeRegConfirmIcon");
 
-    /* ════════════════════════════════════════════════════
-       CONTROLE DE MODAIS
-    ════════════════════════════════════════════════════ */
-    const loginOv    = document.getElementById("loginOverlay");
-    const registerOv = document.getElementById("registerOverlay");
+    /* ── Caps Lock detection ───────────────────────────────────── */
+    function setupCapsLock(inputId, warnId) {
+      const inp  = $(inputId);
+      const warn = $(warnId);
+      if (!inp || !warn) return;
+      inp.addEventListener("keyup", e => {
+        warn.classList.toggle("show", !!(e.getModifierState && e.getModifierState("CapsLock")));
+      });
+      inp.addEventListener("blur", () => warn.classList.remove("show"));
+    }
+    setupCapsLock("loginPassword", "loginCapsWarn");
+    setupCapsLock("regPassword",   "regCapsWarn");
 
-    const openLogin    = () => loginOv.classList.add("open");
-    const openRegister = () => registerOv.classList.add("open");
-    const closeLogin   = () => loginOv.classList.remove("open");
-    const closeRegister= () => registerOv.classList.remove("open");
+    /* ── Password strength ───────────────────────────────────── */
+    function checkStrength(pwd) {
+      if (!pwd) return 0;
+      let score = 0;
+      if (pwd.length >= 6)  score++;
+      if (pwd.length >= 10) score++;
+      if (/[A-Z]/.test(pwd) || /[0-9]/.test(pwd)) score++;
+      if (/[^A-Za-z0-9]/.test(pwd) || (pwd.length >= 12)) score++;
+      return score;
+    }
+    const strLabels = ["", "Muito fraca", "Fraca", "Boa", "Forte! 💪"];
 
-    document.getElementById("openLoginBtn")   .addEventListener("click", openLogin);
-    document.getElementById("openRegisterBtn").addEventListener("click", openRegister);
-    document.getElementById("closeLogin")     .addEventListener("click", closeLogin);
-    document.getElementById("closeRegister")  .addEventListener("click", closeRegister);
-
-    document.getElementById("goToRegister").addEventListener("click", () => { closeLogin(); openRegister(); });
-    document.getElementById("goToLogin")   .addEventListener("click", () => { closeRegister(); openLogin(); });
-
-    [loginOv, registerOv].forEach(o => {
-      o.addEventListener("click", e => { if (e.target === o) o.classList.remove("open"); });
+    $("regPassword").addEventListener("input", () => {
+      const pwd   = $("regPassword").value;
+      const wrap  = $("pwdStrengthWrap");
+      const label = $("pwdStrengthLabel");
+      if (!pwd) {
+        wrap.className = "pwd-strength-wrap str-0";
+        label.textContent = "Digite uma senha";
+        wrap.classList.remove("visible");
+        inputReset("regPassword");
+        clearHint("regPwdHint");
+        return;
+      }
+      const s = checkStrength(pwd);
+      wrap.className = `pwd-strength-wrap str-${s} visible`;
+      label.textContent = strLabels[s] || "";
+      if (s >= 3) { inputOk("regPassword"); clearHint("regPwdHint"); }
+      else if (s <= 1) { inputErr("regPassword"); hint("regPwdHint","Use letras maiúsculas, números ou símbolos","err"); }
+      else { inputReset("regPassword"); clearHint("regPwdHint"); }
+      // Re-check confirm if already typed
+      const conf = $("regConfirm").value;
+      if (conf) checkConfirm(pwd, conf);
     });
 
-    /* ════════════════════════════════════════════════════
-       LOGIN E-MAIL / SENHA  +  REMEMBER ME
-    ════════════════════════════════════════════════════ */
-    const submitLoginBtn  = document.getElementById("submitLoginBtn");
+    function checkConfirm(pwd, conf) {
+      if (!conf) { clearHint("regConfirmHint"); inputReset("regConfirm"); return; }
+      if (pwd === conf) { inputOk("regConfirm"); hint("regConfirmHint","✓ Senhas conferem","ok"); }
+      else             { inputErr("regConfirm"); hint("regConfirmHint","As senhas não conferem","err"); }
+    }
+
+    $("regConfirm").addEventListener("input", () =>
+      checkConfirm($("regPassword").value, $("regConfirm").value));
+
+    /* Live e-mail validation */
+    function validateEmail(email) {
+      return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+    }
+    function onEmailBlur(inputId, hintId) {
+      const val = $(inputId).value.trim();
+      if (!val) { inputReset(inputId); clearHint(hintId); return; }
+      if (validateEmail(val)) { inputOk(inputId); clearHint(hintId); }
+      else { inputErr(inputId); hint(hintId, "E-mail inválido", "err"); }
+    }
+    $("loginEmail").addEventListener("blur",  () => onEmailBlur("loginEmail",  "loginEmailHint"));
+    $("regEmail")  .addEventListener("blur",  () => onEmailBlur("regEmail",    "regEmailHint"));
+    $("forgotEmail").addEventListener("blur", () => onEmailBlur("forgotEmail", "forgotEmailHint"));
+
+    /* Live name validation */
+    $("regName").addEventListener("input", () => {
+      const v = $("regName").value.trim();
+      if (!v) { inputReset("regName"); clearHint("regNameHint"); return; }
+      if (v.length < 2) { inputErr("regName"); hint("regNameHint","Mínimo 2 caracteres","err"); }
+      else { inputOk("regName"); hint("regNameHint",`${v.length}/30 caracteres ✓`,"ok"); }
+    });
+
+    /* ════════════════════════════════════════════════════════════
+       MODAL CONTROLS
+    ════════════════════════════════════════════════════════════ */
+    const loginOv    = $("loginOverlay");
+    const registerOv = $("registerOverlay");
+    const forgotOv   = $("forgotOverlay");
+
+    function openModal(ov, focusId) {
+      ov.classList.add("open");
+      if (focusId) setTimeout(() => $(focusId)?.focus(), 80);
+    }
+    function closeModal(ov) { ov.classList.remove("open"); }
+
+    // Open/close bindings
+    $("openLoginBtn")   .addEventListener("click", () => openModal(loginOv,    "loginEmail"));
+    $("openRegisterBtn").addEventListener("click", () => openModal(registerOv, "regName"));
+    $("closeLogin")     .addEventListener("click", () => closeModal(loginOv));
+    $("closeRegister")  .addEventListener("click", () => closeModal(registerOv));
+    $("closeForgot")    .addEventListener("click", () => { closeModal(forgotOv); resetForgot(); });
+
+    // Overlay click-outside
+    [loginOv, registerOv, forgotOv].forEach(o =>
+      o.addEventListener("click", e => { if (e.target === o) { closeModal(o); } }));
+
+    // Keyboard ESC
+    document.addEventListener("keydown", e => {
+      if (e.key === "Escape") [loginOv, registerOv, forgotOv].forEach(closeModal);
+    });
+
+    // Switch between login ↔ register
+    $("goToRegister").addEventListener("click", () => { closeModal(loginOv);    openModal(registerOv, "regName"); });
+    $("goToLogin")   .addEventListener("click", () => { closeModal(registerOv); openModal(loginOv,    "loginEmail"); });
+
+    /* ════════════════════════════════════════════════════════════
+       LOGIN
+    ════════════════════════════════════════════════════════════ */
+    const submitLoginBtn  = $("submitLoginBtn");
     const submitLoginHTML = submitLoginBtn.innerHTML;
 
-    async function doEmailLogin() {
-      const email      = document.getElementById("loginEmail").value.trim();
-      const password   = document.getElementById("loginPassword").value;
-      const rememberMe = document.getElementById("rememberMe").checked;
+    async function doLogin() {
+      const email    = $("loginEmail").value.trim();
+      const password = $("loginPassword").value;
+      const remember = $("rememberMe").checked;
 
-      if (!email || !password) return showErr("loginError", "Preencha e-mail e senha.");
+      hideErr("loginError");
+
+      // Client-side validation
+      if (!email) {
+        inputErr("loginEmail"); hint("loginEmailHint","E-mail obrigatório","err");
+        $("loginEmail").focus(); return;
+      }
+      if (!validateEmail(email)) {
+        inputErr("loginEmail"); hint("loginEmailHint","E-mail inválido","err");
+        $("loginEmail").focus(); return;
+      }
+      if (!password) {
+        inputErr("loginPassword"); hint("loginPwdHint","Senha obrigatória","err");
+        $("loginPassword").focus(); return;
+      }
 
       setLoading(submitLoginBtn, true, submitLoginHTML);
       try {
-        // Set Firebase persistence based on remember-me choice
-        const persistence = rememberMe ? browserLocalPersistence : browserSessionPersistence;
-        await setPersistence(auth, persistence);
-
+        await setPersistence(auth, remember ? browserLocalPersistence : browserSessionPersistence);
         const result = await signInWithEmailAndPassword(auth, email, password);
         await ensureProfile(result.user);
-
-        if (rememberMe) {
-          // Store session expiry (30 minutes)
-          setSessionExpiry();
-        } else {
-          // No persistent session
-          clearSessionExpiry();
-        }
-
+        if (remember) setSessionExpiry(); else clearSessionExpiry();
         goTo("home.html");
       } catch (err) {
         setLoading(submitLoginBtn, false, submitLoginHTML);
         showErr("loginError", fErr(err.code));
+        if (err.code === "auth/invalid-credential" || err.code === "auth/wrong-password") {
+          inputErr("loginPassword"); $("loginPassword").focus();
+        }
       }
     }
 
-    submitLoginBtn.addEventListener("click", doEmailLogin);
-    document.getElementById("loginPassword")
-      .addEventListener("keydown", e => { if (e.key === "Enter") doEmailLogin(); });
+    submitLoginBtn.addEventListener("click", doLogin);
+    $("loginEmail")   .addEventListener("keydown", e => { if (e.key === "Enter") $("loginPassword").focus(); });
+    $("loginPassword").addEventListener("keydown", e => { if (e.key === "Enter") doLogin(); });
 
-    /* ── Esqueci a senha ─────────────────────────────── */
-    document.getElementById("forgotPasswordLink").addEventListener("click", async () => {
-      const email = document.getElementById("loginEmail").value.trim();
-      if (!email) return showErr("loginError", "Digite seu e-mail no campo acima.");
+    /* ════════════════════════════════════════════════════════════
+       FORGOT PASSWORD FLOW
+    ════════════════════════════════════════════════════════════ */
+    function resetForgot() {
+      $("forgotStep1").style.display = "";
+      $("forgotStep2").style.display = "none";
+      $("fstep1").classList.add("active");
+      $("fstep2").classList.remove("active");
+      $("forgotEmail").value = "";
+      hideErr("forgotError");
+      inputReset("forgotEmail");
+      clearHint("forgotEmailHint");
+    }
+
+    // Open forgot from login modal
+    $("forgotPasswordLink").addEventListener("click", () => {
+      // Pre-fill email if already typed in login form
+      const loginEmail = $("loginEmail").value.trim();
+      closeModal(loginOv);
+      openModal(forgotOv, "forgotEmail");
+      if (loginEmail) {
+        $("forgotEmail").value = loginEmail;
+        if (validateEmail(loginEmail)) inputOk("forgotEmail");
+      }
+    });
+    $("forgotPasswordLink").addEventListener("keydown", e => {
+      if (e.key === "Enter" || e.key === " ") $("forgotPasswordLink").click();
+    });
+
+    $("backToLoginBtn").addEventListener("click", () => {
+      closeModal(forgotOv); resetForgot();
+      openModal(loginOv, "loginEmail");
+    });
+
+    $("forgotDoneBtn").addEventListener("click", () => {
+      closeModal(forgotOv); resetForgot();
+      openModal(loginOv, "loginEmail");
+    });
+
+    const sendResetBtn  = $("sendResetBtn");
+    const sendResetHTML = sendResetBtn.innerHTML;
+
+    async function doSendReset() {
+      const email = $("forgotEmail").value.trim();
+      hideErr("forgotError");
+      if (!email) {
+        inputErr("forgotEmail"); hint("forgotEmailHint","Digite seu e-mail","err");
+        $("forgotEmail").focus(); return;
+      }
+      if (!validateEmail(email)) {
+        inputErr("forgotEmail"); hint("forgotEmailHint","E-mail inválido","err");
+        $("forgotEmail").focus(); return;
+      }
+
+      setLoading(sendResetBtn, true, sendResetHTML);
       try {
         await sendPasswordResetEmail(auth, email);
-        toast("📧 E-mail de redefinição enviado! Verifique sua caixa.", "success");
+        setLoading(sendResetBtn, false, sendResetHTML);
+        // Show step 2
+        $("forgotStep1").style.display = "none";
+        $("forgotStep2").style.display = "";
+        $("fstep1").classList.remove("active");
+        $("fstep2").classList.add("active");
+        $("forgotSentTo").textContent = email;
+        $("forgotSentMsg").textContent = `Link enviado para ${email}`;
       } catch (err) {
-        showErr("loginError", fErr(err.code));
+        setLoading(sendResetBtn, false, sendResetHTML);
+        showErr("forgotError", fErr(err.code));
+      }
+    }
+
+    sendResetBtn.addEventListener("click", doSendReset);
+    $("forgotEmail").addEventListener("keydown", e => { if (e.key === "Enter") doSendReset(); });
+
+    // Resend link
+    $("resendResetLink").addEventListener("click", async () => {
+      const email = $("forgotSentTo").textContent;
+      if (!email) return;
+      try {
+        await sendPasswordResetEmail(auth, email);
+        toast("📧 E-mail reenviado! Verifique sua caixa.", "success");
+      } catch (err) {
+        toast(fErr(err.code), "error");
       }
     });
 
-    /* ════════════════════════════════════════════════════
-       CADASTRO
-    ════════════════════════════════════════════════════ */
-    const submitRegBtn  = document.getElementById("submitRegisterBtn");
+    /* ════════════════════════════════════════════════════════════
+       REGISTER
+    ════════════════════════════════════════════════════════════ */
+    const submitRegBtn  = $("submitRegisterBtn");
     const submitRegHTML = submitRegBtn.innerHTML;
 
     async function doRegister() {
-      const name     = document.getElementById("regName")    .value.trim();
-      const email    = document.getElementById("regEmail")   .value.trim();
-      const password = document.getElementById("regPassword").value;
-      const confirm  = document.getElementById("regConfirm") .value;
+      const name     = $("regName").value.trim();
+      const email    = $("regEmail").value.trim();
+      const password = $("regPassword").value;
+      const confirm  = $("regConfirm").value;
 
-      if (!name || !email || !password || !confirm)
-        return showErr("registerError", "Preencha todos os campos.");
-      if (password !== confirm)
-        return showErr("registerError", "As senhas não coincidem.");
-      if (password.length < 6)
-        return showErr("registerError", "Senha muito curta (mín. 6 caracteres).");
-      if (name.length < 2)
-        return showErr("registerError", "Nome deve ter pelo menos 2 caracteres.");
+      hideErr("registerError");
+      let hasErr = false;
+
+      if (!name || name.length < 2) {
+        inputErr("regName"); hint("regNameHint","Nome deve ter pelo menos 2 caracteres","err"); hasErr = true;
+      }
+      if (!email || !validateEmail(email)) {
+        inputErr("regEmail"); hint("regEmailHint","E-mail inválido ou vazio","err"); hasErr = true;
+      }
+      if (!password || password.length < 6) {
+        inputErr("regPassword"); hint("regPwdHint","Senha deve ter pelo menos 6 caracteres","err"); hasErr = true;
+      }
+      if (password !== confirm) {
+        inputErr("regConfirm"); hint("regConfirmHint","As senhas não coincidem","err"); hasErr = true;
+      }
+      if (hasErr) return;
 
       setLoading(submitRegBtn, true, submitRegHTML);
       try {
-        // New registrations use local persistence by default
         await setPersistence(auth, browserLocalPersistence);
         const result = await createUserWithEmailAndPassword(auth, email, password);
         await updateProfile(result.user, { displayName: name });
         await ensureProfile(result.user, name);
-        // Set session expiry for new registrations
         setSessionExpiry();
+        toast("🎉 Conta criada! Bem-vindo à guilda!", "success");
         goTo("home.html");
       } catch (err) {
         setLoading(submitRegBtn, false, submitRegHTML);
-        showErr("registerError", fErr(err.code));
+        const msg = fErr(err.code);
+        showErr("registerError", msg);
+        if (err.code === "auth/email-already-in-use") {
+          inputErr("regEmail"); hint("regEmailHint","Este e-mail já está em uso","err");
+        }
       }
     }
 
     submitRegBtn.addEventListener("click", doRegister);
-    document.getElementById("regConfirm")
-      .addEventListener("keydown", e => { if (e.key === "Enter") doRegister(); });
+    $("regConfirm").addEventListener("keydown", e => { if (e.key === "Enter") doRegister(); });
+    $("regName")   .addEventListener("keydown", e => { if (e.key === "Enter") $("regEmail").focus(); });
+    $("regEmail")  .addEventListener("keydown", e => { if (e.key === "Enter") $("regPassword").focus(); });
+    $("regPassword").addEventListener("keydown", e => { if (e.key === "Enter") $("regConfirm").focus(); });
 
-    /* ── Partículas de fundo ─────────────────────────── */
-    const ptc = document.getElementById("particles");
-    for (let i = 0; i < 40; i++) {
+    /* ── Particles ───────────────────────────────────────────── */
+    const ptc = $("particles");
+    for (let i = 0; i < 35; i++) {
       const p = document.createElement("div");
       p.className = "particle";
-      p.style.cssText = `left:${Math.random()*100}%;animation-delay:${Math.random()*8}s;
-        animation-duration:${6+Math.random()*8}s;
-        width:${2+Math.random()*4}px;height:${2+Math.random()*4}px;
-        opacity:${0.2+Math.random()*0.5};`;
+      p.style.cssText = [
+        `left:${Math.random()*100}%`,
+        `animation-delay:${Math.random()*10}s`,
+        `animation-duration:${7+Math.random()*9}s`,
+        `width:${2+Math.random()*3}px`,
+        `height:${2+Math.random()*3}px`,
+        `opacity:${0.15+Math.random()*0.45}`
+      ].join(";") + ";";
       ptc.appendChild(p);
     }
   </script>
