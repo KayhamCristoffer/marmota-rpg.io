@@ -879,10 +879,21 @@
     const SESSION_DURATION   = 30 * 60 * 1000; // 30 min
     const SESSION_KEY        = "rpg_session_expiry";
 
-    const app  = getApps().length ? getApps()[0] : initializeApp(cfg);
-    try { getAnalytics(app); } catch(_) {}
-    const auth = getAuth(app);
-    const db   = getDatabase(app);
+    let app, auth, db;
+    try {
+      app  = getApps().length ? getApps()[0] : initializeApp(cfg);
+      try { getAnalytics(app); } catch(_) {}
+      auth = getAuth(app);
+      db   = getDatabase(app);
+    } catch (error) {
+      console.error("❌ Erro ao inicializar Firebase:", error);
+      // Forçar esconder loader após 1 segundo em caso de erro
+      setTimeout(() => {
+        const loader = document.getElementById("pageLoader");
+        if (loader) loader.classList.add("hide");
+        alert("Erro ao conectar com o Firebase. Verifique sua conexão e recarregue a página.");
+      }, 1000);
+    }
 
     /* ── Helpers ─────────────────────────────────────────────── */
     const $ = id => document.getElementById(id);
@@ -894,7 +905,12 @@
     function goTo(page) { window.location.replace(basePath() + page); }
 
     /* ── Loader ──────────────────────────────────────────────── */
-    function hideLoader() { $("pageLoader").classList.add("hide"); }
+    let loaderHidden = false;
+    function hideLoader() { 
+      if (loaderHidden) return;
+      loaderHidden = true;
+      $("pageLoader").classList.add("hide"); 
+    }
 
     /* ── Session management ──────────────────────────────────── */
     const setSessionExpiry    = () => localStorage.setItem(SESSION_KEY, (Date.now() + SESSION_DURATION).toString());
@@ -906,13 +922,26 @@
     });
     setInterval(() => { if (isSessionExpired()) { clearSessionExpiry(); auth.signOut().catch(()=>{}); } }, 60_000);
 
+    /* ── Fallback loader timeout (garante que o loader esconda) ── */
+    const loaderTimeout = setTimeout(() => {
+      console.warn("⚠️ Loader timeout atingido - forçando esconder o loader");
+      hideLoader();
+    }, 5000); // 5 segundos de timeout
+
     /* ── Auth state change ───────────────────────────────────── */
     onAuthStateChanged(auth, user => {
+      clearTimeout(loaderTimeout); // Cancela o timeout se o auth inicializar
       hideLoader();
       if (user) {
         if (isSessionExpired()) { clearSessionExpiry(); auth.signOut(); return; }
         goTo("home.html");
       }
+    }, error => {
+      // Callback de erro
+      clearTimeout(loaderTimeout);
+      console.error("❌ Erro no onAuthStateChanged:", error);
+      hideLoader();
+      toast("Erro ao inicializar autenticação. Recarregue a página.", "error");
     });
 
     /* ── Ensure profile in DB ────────────────────────────────── */
@@ -983,7 +1012,7 @@
       setTimeout(() => box.classList.remove("shake"), 500);
     }
 
-    /* ── Show/hide error banners ─────────────────────────── */──── */
+    /* ── Show/hide error banners ─────────────────────────── */
     function showErr(prefix, msg) {
       const el = $(prefix); const msgEl = $(prefix + "Msg");
       if (msgEl) msgEl.textContent = msg;
@@ -1341,6 +1370,14 @@
       ].join(";") + ";";
       ptc.appendChild(p);
     }
+
+    /* ── Garantia final: esconder loader após 3 segundos (backup) ── */
+    setTimeout(() => {
+      if (!loaderHidden) {
+        console.warn("⚠️ Loader ainda visível após 3s - forçando esconder");
+        hideLoader();
+      }
+    }, 3000);
   </script>
 </body>
 </html>
