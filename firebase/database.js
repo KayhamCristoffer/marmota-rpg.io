@@ -445,7 +445,8 @@ export async function proc_submitQuestProof(uid, userQuestId, printUrl) {
     throw new Error("Você já enviou um comprovante e está aguardando revisão.");
   if (uq.status === "completed")
     throw new Error("Esta quest já foi completada.");
-  if (uq.status !== "active")
+  // Permitir reenvio se status for "active" ou "rejected"
+  if (uq.status !== "active" && uq.status !== "rejected")
     throw new Error(`Não é possível enviar comprovante: status "${uq.status}".`);
 
   await update(ref(db, `userQuests/${uid}/${userQuestId}`), {
