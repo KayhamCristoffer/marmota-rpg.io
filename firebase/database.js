@@ -813,7 +813,12 @@ export async function proc_getRanking(period = "total", limit = 100) {
     monthly: "coinsMonthly"
   }[period] || "coinsTotal";
 
-  const sorted = entries
+  // Filtrar usuários com moedas > 0 para períodos diário/semanal/mensal
+  const filtered = (period !== "total")
+    ? entries.filter(e => (e[field] || 0) > 0)
+    : entries;
+
+  const sorted = filtered
     .sort((a, b) => (b[field] || 0) - (a[field] || 0));
 
   const sliced = (limit > 0) ? sorted.slice(0, limit) : sorted;
@@ -1025,7 +1030,12 @@ export function listenRanking(period = "total", callback) {
     const userMap = {};
     usersData.forEach(u => { userMap[u.uid || u.id] = u; });
 
-    const result = rankData
+    // Filtrar usuários com moedas > 0 para períodos diário/semanal/mensal
+    const filtered = (period !== "total")
+      ? rankData.filter(e => (e[field] || 0) > 0)
+      : rankData;
+
+    const result = filtered
       .sort((a, b) => (b[field] || 0) - (a[field] || 0))
       .map((e, i) => {
         const u = userMap[e.uid || e.id] || {};
