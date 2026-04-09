@@ -1129,3 +1129,384 @@ export const getRanking         = proc_getRanking;
 export const resetRanking       = proc_resetRanking;
 
 export const getUserStats = proc_getUserStats;
+
+/* ════════════════════════════════════════════════════════════════
+   §11  MAPS SYSTEM
+════════════════════════════════════════════════════════════════ */
+
+/**
+ * Submeter novo mapa para aprovação
+ */
+async function proc_submitMap(uid, mapData) {
+  if (!uid || !mapData) throw new Error("UID e dados do mapa são obrigatórios");
+  
+  const user = await proc_getUser(uid);
+  if (!user) throw new Error("Usuário não encontrado");
+
+  // Validações
+  if (!mapData.title || mapData.title.length < 3) {
+    throw new Error("Título deve ter pelo menos 3 caracteres");
+  }
+  if (!mapData.description || mapData.description.length < 20) {
+    throw new Error("Descrição deve ter pelo menos 20 caracteres");
+  }
+  if (!mapData.driveLink) {
+    throw new Error("Link do Drive é obrigatório");
+  }
+  if (!mapData.screenshots || mapData.screenshots.length === 0) {
+    throw new Error("Adicione pelo menos 1 print de preview");
+  }
+
+  const mapRef = push(ref(db, "maps"));
+  const mapId = mapRef.key;
+
+  const newMap = {
+    id: mapId,
+    title: mapData.title.trim(),
+    description: mapData.description.trim(),
+    topics: mapData.topics || [],
+    authorUid: uid,
+    authorName: user.nickname || user.username || "Aventureiro",
+    
+    driveLink: mapData.driveLink.trim(),
+    screenshots: mapData.screenshots,
+    downloadUrl: mapData.downloadUrl || mapData.driveLink,
+    
+    status: "pending",
+    approvedBy: null,
+    approvedAt: null,
+    rejectionReason: null,
+    
+    coinsReward: 0,
+    tokensReward: 0,
+    rewardClaimed: false,
+    
+    likes: 0,
+    favorites: 0,
+    downloads: 0,
+    views: 0,
+    
+    created_at: now(),
+    updated_at: now(),
+    lastEditedAt: null
+  };
+
+  await set(mapRef, newMap);
+  
+  // Atualizar contador do usuário
+  await update(ref(db, `users/${uid}`), {
+    mapsSubmitted: (user.mapsSubmitted || 0) + 1
+  });
+
+  return { id: mapId, ...newMap };
+}
+
+/**
+ * Editar mapa existente (requer nova aprovação)
+ */
+async function proc_editMap(uid, mapId, updates) {
+  const mapSnap = await get(ref(db, `maps/${mapId}`));
+  if (!mapSnap.exists()) throw new Error("Mapa não encontrado");
+  
+  const map = mapSnap.val();
+  if (map.authorUid !== uid) throw new Error("Você não pode editar este mapa");
+
+  // Validações similares ao submitMap
+  if (updates.title && updates.title.length < 3) {
+    throw new Error("Título deve ter pelo menos 3 caracteres");
+  }
+  if (updates.description && updates.description.length < 20) {
+    throw new Error("Descrição deve ter pelo menos 20 caracteres");
+  }
+
+  const updatedData = {
+    ...updates,
+    status: "pending", // Volta para aprovação
+    approvedBy: null,
+    approvedAt: null,
+    rejectionReason: null,
+    updated_at: now(),
+    lastEditedAt: now()
+  };
+
+  await update(ref(db, `maps/${mapId}`), updatedData);
+  return { id: mapId, ...map, ...updatedData };
+}
+
+/**
+ * Aprovar mapa (ADMIN)
+ */
+async function proc_approveMap(mapId, adminUid, rewards = {}) {
+  const mapSnap = await get(ref(db, `maps/${mapId}`));
+  if (!mapSnap.exists()) throw new Error("Mapa não encontrado");
+  
+  const map = mapSnap.val();
+  const coinsReward = rewards.coins || 50;  // Padrão: 50 moedas
+  const tokensReward = rewards.tokens || 10; // Padrão: 10 tokens
+
+  // Atualizar mapa
+  await update(ref(db, `maps/${mapId}`), {
+    status: "approved",
+    approvedBy: adminUid,
+    approvedAt: now(),
+    rejectionReason: null,
+    coinsReward,
+    tokensReward
+  });
+
+  // Dar recompensa ao autor (se ainda não recebeu)
+  if (!map.rewardClaimed) {
+    const author = await proc_getUser(map.authorUid);
+    const newCoins = (author.coins || 0) + coinsReward;
+    const newTokens = (author.tokens || 0) + tokensReward;
+
+    await update(ref(db, `users/${map.authorUid}`), {
+      coins: newCoins,
+      tokens: newTokens,
+      mapsApproved: (author.mapsApproved || 0) + 1
+    });
+
+    await update(ref(db, `maps/${mapId}`), {
+      rewardClaimed: true
+    });
+
+    // Atualizar ranking
+    await proc_updateRankingEntry(map.authorUid);
+  }
+
+  return { success: true, coinsReward, tokensReward };
+}
+
+/**
+ * Rejeitar mapa (ADMIN)
+ */
+async function proc_rejectMap(mapId, adminUid, reason) {
+  const mapSnap = await get(ref(db, `maps/${mapId}`));
+  if (!mapSnap.exists()) throw new Error("Mapa não encontrado");
+
+  await update(ref(db, `maps/${mapId}`), {
+    status: "rejected",
+    approvedBy: adminUid,
+    approvedAt: now(),
+    rejectionReason: reason || "Mapa não atende aos requisitos"
+  });
+
+  return { success: true };
+}
+
+/**
+ * Listar mapas aprovados (Regiões)
+ */
+async function proc_getApprovedMaps() {
+  const mapsSnap = await get(ref(db, "maps"));
+  if (!mapsSnap.exists()) return [];
+
+  let maps = snapToArray(mapsSnap);
+  
+  // Filtrar apenas aprovados
+  maps = maps.filter(m => m.status === "approved");
+  
+  // Ordenar por likes (mais curtidos primeiro)
+  maps.sort((a, b) => (b.likes || 0) - (a.likes || 0));
+
+  return maps;
+}
+
+/**
+ * Listar todos os mapas (ADMIN)
+ */
+async function proc_getAllMaps() {
+  const mapsSnap = await get(ref(db, "maps"));
+  if (!mapsSnap.exists()) return [];
+
+  let maps = snapToArray(mapsSnap);
+  maps.sort((a, b) => b.created_at - a.created_at);
+
+  return maps;
+}
+
+/**
+ * Listar mapas pendentes (ADMIN)
+ */
+async function proc_getPendingMaps() {
+  const mapsSnap = await get(ref(db, "maps"));
+  if (!mapsSnap.exists()) return [];
+
+  let maps = snapToArray(mapsSnap);
+  maps = maps.filter(m => m.status === "pending");
+  maps.sort((a, b) => b.created_at - a.created_at);
+
+  return maps;
+}
+
+/**
+ * Listar meus mapas (usuário)
+ */
+async function proc_getMyMaps(uid) {
+  const mapsSnap = await get(ref(db, "maps"));
+  if (!mapsSnap.exists()) return [];
+
+  let maps = snapToArray(mapsSnap);
+  maps = maps.filter(m => m.authorUid === uid);
+  maps.sort((a, b) => b.created_at - a.created_at);
+
+  return maps;
+}
+
+/**
+ * Curtir mapa
+ */
+async function proc_likeMap(mapId, uid) {
+  const likeRef = ref(db, `mapLikes/${mapId}/${uid}`);
+  const likeSnap = await get(likeRef);
+
+  if (likeSnap.exists()) {
+    // Já curtiu - remover like
+    await remove(likeRef);
+    await update(ref(db, `maps/${mapId}`), {
+      likes: increment(-1)
+    });
+    return { liked: false };
+  } else {
+    // Adicionar like
+    await set(likeRef, true);
+    await update(ref(db, `maps/${mapId}`), {
+      likes: increment(1)
+    });
+    return { liked: true };
+  }
+}
+
+/**
+ * Favoritar mapa
+ */
+async function proc_favoriteMap(mapId, uid) {
+  const mapSnap = await get(ref(db, `maps/${mapId}`));
+  if (!mapSnap.exists()) throw new Error("Mapa não encontrado");
+  
+  const map = mapSnap.val();
+  const favRef = ref(db, `mapFavorites/${uid}/${mapId}`);
+  const favSnap = await get(favRef);
+
+  if (favSnap.exists()) {
+    // Já favoritou - remover
+    await remove(favRef);
+    await update(ref(db, `maps/${mapId}`), {
+      favorites: increment(-1)
+    });
+    return { favorited: false };
+  } else {
+    // Adicionar aos favoritos
+    await set(favRef, {
+      addedAt: now(),
+      mapTitle: map.title
+    });
+    await update(ref(db, `maps/${mapId}`), {
+      favorites: increment(1)
+    });
+    return { favorited: true };
+  }
+}
+
+/**
+ * Incrementar contador de downloads
+ */
+async function proc_incrementMapDownload(mapId) {
+  await update(ref(db, `maps/${mapId}`), {
+    downloads: increment(1)
+  });
+}
+
+/**
+ * Incrementar contador de visualizações
+ */
+async function proc_incrementMapView(mapId) {
+  await update(ref(db, `maps/${mapId}`), {
+    views: increment(1)
+  });
+}
+
+/**
+ * Verificar se usuário curtiu um mapa
+ */
+async function proc_checkUserLike(mapId, uid) {
+  const likeSnap = await get(ref(db, `mapLikes/${mapId}/${uid}`));
+  return likeSnap.exists();
+}
+
+/**
+ * Verificar se usuário favoritou um mapa
+ */
+async function proc_checkUserFavorite(mapId, uid) {
+  const favSnap = await get(ref(db, `mapFavorites/${uid}/${mapId}`));
+  return favSnap.exists();
+}
+
+/**
+ * Obter detalhes de um mapa
+ */
+async function proc_getMapDetails(mapId, viewerUid = null) {
+  const mapSnap = await get(ref(db, `maps/${mapId}`));
+  if (!mapSnap.exists()) throw new Error("Mapa não encontrado");
+  
+  const map = mapSnap.val();
+  
+  // Incrementar visualização
+  await proc_incrementMapView(mapId);
+  
+  // Se houver um usuário visualizando, verificar likes/favoritos
+  if (viewerUid) {
+    const [liked, favorited] = await Promise.all([
+      proc_checkUserLike(mapId, viewerUid),
+      proc_checkUserFavorite(mapId, viewerUid)
+    ]);
+    
+    return { ...map, userLiked: liked, userFavorited: favorited };
+  }
+  
+  return map;
+}
+
+/**
+ * Adicionar mapa exemplo (ADMIN)
+ */
+async function proc_addMapExample(exampleData) {
+  const exampleRef = push(ref(db, "mapExamples"));
+  const example = {
+    id: exampleRef.key,
+    title: exampleData.title,
+    description: exampleData.description,
+    downloadUrl: exampleData.downloadUrl,
+    previewImage: exampleData.previewImage,
+    created_at: now()
+  };
+  
+  await set(exampleRef, example);
+  return example;
+}
+
+/**
+ * Listar mapas exemplo
+ */
+async function proc_getMapExamples() {
+  const snap = await get(ref(db, "mapExamples"));
+  if (!snap.exists()) return [];
+  
+  return snapToArray(snap);
+}
+
+// Adicionar aos exports
+export const submitMap            = proc_submitMap;
+export const editMap              = proc_editMap;
+export const approveMap           = proc_approveMap;
+export const rejectMap            = proc_rejectMap;
+export const getApprovedMaps      = proc_getApprovedMaps;
+export const getAllMaps           = proc_getAllMaps;
+export const getPendingMaps       = proc_getPendingMaps;
+export const getMyMaps            = proc_getMyMaps;
+export const likeMap              = proc_likeMap;
+export const favoriteMap          = proc_favoriteMap;
+export const incrementMapDownload = proc_incrementMapDownload;
+export const getMapDetails        = proc_getMapDetails;
+export const addMapExample        = proc_addMapExample;
+export const getMapExamples       = proc_getMapExamples;

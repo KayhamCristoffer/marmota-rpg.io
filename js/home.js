@@ -40,6 +40,11 @@ document.addEventListener("DOMContentLoaded", async () => {
       case "stats":    await loadStats();                     break;
       case "quests":   await window.loadQuests?.();           break;
       case "myquests": await window.loadMyQuests?.();         break;
+      case "maps":     
+        await window.loadMyMaps?.("all");
+        await window.loadMapExamples?.();
+        break;
+      case "regions":  await window.loadRegions?.("likes");   break;
       case "ranking":  await window.loadRanking?.();          break;
       case "profile":  setupProfile(window.RPG.getProfile()); break;
     }
@@ -62,7 +67,9 @@ window.loadStats = async function loadStats() {
     _set("sidebarName",  el => el.textContent = _truncate(data.nickname || data.username, 18));
     _set("sidebarLevel", el => { if (!el.querySelector("i")) el.textContent = data.level; });
     _set("sidebarCoins", el => el.textContent = (data.coins||0).toLocaleString("pt-BR"));
+    _set("sidebarTokens", el => el.textContent = (data.tokens||0).toLocaleString("pt-BR"));
     _set("topbarCoins",  el => el.textContent = (data.coins||0).toLocaleString("pt-BR"));
+    _set("topbarTokens",  el => el.textContent = (data.tokens||0).toLocaleString("pt-BR"));
 
     const xpText = `${data.xpProgress} / ${data.xpForNextLevel}`;
     _set("xpText", el => el.textContent = xpText);

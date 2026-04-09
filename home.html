@@ -47,11 +47,18 @@
       </div>
     </div>
 
-    <!-- Coins -->
+    <!-- Coins & Tokens -->
     <div class="sidebar-coins">
-      <i class="fas fa-coins"></i>
-      <span id="sidebarCoins">0</span>
-      <span class="coins-label">moedas</span>
+      <div class="coin-item">
+        <i class="fas fa-coins"></i>
+        <span id="sidebarCoins">0</span>
+        <span class="coins-label">moedas</span>
+      </div>
+      <div class="coin-item">
+        <i class="fas fa-gem"></i>
+        <span id="sidebarTokens">0</span>
+        <span class="coins-label">tokens</span>
+      </div>
     </div>
 
     <!-- Navigation -->
@@ -69,6 +76,14 @@
         <i class="fas fa-list-check"></i>
         <span>Minhas Quests</span>
         <div class="nav-badge" id="pendingBadge"></div>
+      </a>
+      <a href="#" class="nav-item" data-page="maps">
+        <i class="fas fa-map"></i>
+        <span>Mapas</span>
+      </a>
+      <a href="#" class="nav-item" data-page="regions">
+        <i class="fas fa-globe-americas"></i>
+        <span>Regiões</span>
       </a>
       <a href="#" class="nav-item" data-page="ranking">
         <i class="fas fa-trophy"></i>
@@ -99,9 +114,15 @@
         <i class="fas fa-bars"></i>
       </button>
       <div class="topbar-title" id="topbarTitle">📊 Estatísticas</div>
-      <div class="topbar-coins">
-        <i class="fas fa-coins"></i>
-        <span id="topbarCoins">0</span>
+      <div class="topbar-resources">
+        <div class="topbar-coins">
+          <i class="fas fa-coins"></i>
+          <span id="topbarCoins">0</span>
+        </div>
+        <div class="topbar-tokens">
+          <i class="fas fa-gem"></i>
+          <span id="topbarTokens">0</span>
+        </div>
       </div>
     </div>
 
@@ -324,6 +345,97 @@
       </div>
     </section>
 
+    <!-- ══════════════════════════════════════════════════════
+         PAGE: MAPAS
+    ══════════════════════════════════════════════════════ -->
+    <section class="page" id="page-maps">
+      <div class="page-header">
+        <h2 class="page-title"><i class="fas fa-map"></i> Meus Mapas</h2>
+        <button class="btn-refresh" id="refreshMapsBtn" title="Atualizar">
+          <i class="fas fa-sync-alt"></i> Atualizar
+        </button>
+      </div>
+
+      <!-- Botão Enviar Novo Mapa -->
+      <div style="margin-bottom: 1.5rem;">
+        <button class="btn-primary" id="openSubmitMapBtn" style="width: 100%;">
+          <i class="fas fa-plus"></i> Enviar Novo Mapa
+        </button>
+      </div>
+
+      <!-- Mapas Exemplo para Download -->
+      <div class="info-banner" style="margin-bottom: 1.5rem;">
+        <i class="fas fa-info-circle"></i>
+        <div>
+          <strong>Modelos de Mapa</strong>
+          <p style="margin: 0.5rem 0 0">Baixe mapas exemplo para usar como base:</p>
+          <div id="mapExamplesContainer" style="margin-top: 0.75rem;"></div>
+        </div>
+      </div>
+
+      <!-- Filtros -->
+      <div class="filter-buttons">
+        <button class="filter-btn active" data-map-filter="all">
+          <i class="fas fa-th"></i> Todos
+        </button>
+        <button class="filter-btn" data-map-filter="pending">
+          <i class="fas fa-clock"></i> Pendentes
+        </button>
+        <button class="filter-btn" data-map-filter="approved">
+          <i class="fas fa-check"></i> Aprovados
+        </button>
+        <button class="filter-btn" data-map-filter="rejected">
+          <i class="fas fa-times"></i> Rejeitados
+        </button>
+      </div>
+
+      <!-- Lista de Mapas -->
+      <div id="myMapsList"></div>
+    </section>
+
+    <!-- ══════════════════════════════════════════════════════
+         PAGE: REGIÕES (Ranking de Mapas)
+    ══════════════════════════════════════════════════════ -->
+    <section class="page" id="page-regions">
+      <div class="page-header">
+        <h2 class="page-title"><i class="fas fa-globe-americas"></i> Regiões</h2>
+        <button class="btn-refresh" id="refreshRegionsBtn" title="Atualizar">
+          <i class="fas fa-sync-alt"></i> Atualizar
+        </button>
+      </div>
+
+      <div class="info-banner" style="margin-bottom: 1.5rem;">
+        <i class="fas fa-heart"></i>
+        <div>
+          <strong>Mapas da Comunidade</strong>
+          <p style="margin: 0">Explore mapas criados por outros jogadores. Curta e favorite seus preferidos!</p>
+        </div>
+      </div>
+
+      <!-- Busca -->
+      <div style="margin-bottom: 1rem;">
+        <input type="text" id="regionsSearchInput" 
+               placeholder="🔍 Buscar mapa por nome ou autor..." 
+               style="width: 100%; padding: 0.75rem; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1); background: rgba(0,0,0,0.3); color: #fff;">
+      </div>
+
+      <!-- Ordenação -->
+      <div class="filter-buttons">
+        <button class="filter-btn active" data-sort="likes">
+          <i class="fas fa-heart"></i> Mais Curtidos
+        </button>
+        <button class="filter-btn" data-sort="recent">
+          <i class="fas fa-clock"></i> Mais Recentes
+        </button>
+        <button class="filter-btn" data-sort="downloads">
+          <i class="fas fa-download"></i> Mais Baixados
+        </button>
+      </div>
+
+      <!-- Grid de Mapas -->
+      <div id="regionsMapsList" class="maps-grid"></div>
+    </section>
+
   </main>
 
   <!-- ─── MODAL: ENVIAR PRINT ─────────────────────────────────── -->
@@ -388,6 +500,92 @@
     </div>
   </div>
 
+  <!-- ══════════════════════════════════════════════════════
+       MODAL: ENVIAR MAPA
+  ══════════════════════════════════════════════════════ -->
+  <div class="modal-overlay" id="submitMapModal" style="display:none">
+    <div class="modal" style="max-width: 600px;">
+      <div class="modal-header">
+        <h3 id="submitMapTitle"><i class="fas fa-map"></i> Enviar Novo Mapa</h3>
+        <button class="modal-close" id="closeSubmitMapModal"><i class="fas fa-times"></i></button>
+      </div>
+
+      <div class="modal-body">
+        <div class="form-group">
+          <label><i class="fas fa-heading"></i> Título do Mapa *</label>
+          <input type="text" id="mapTitle" placeholder="Ex: Vila dos Marmotas" maxlength="100">
+          <small class="input-hint">Mínimo 3 caracteres</small>
+        </div>
+
+        <div class="form-group">
+          <label><i class="fas fa-align-left"></i> Descrição/Apresentação *</label>
+          <textarea id="mapDescription" rows="6" 
+                    placeholder="Descreva seu mapa, como foi feito, o que contém, etc..."
+                    maxlength="2000"></textarea>
+          <small class="input-hint">Mínimo 20 caracteres</small>
+        </div>
+
+        <div class="form-group">
+          <label><i class="fas fa-tags"></i> Tópicos/Tags</label>
+          <input type="text" id="mapTopics" 
+                 placeholder="Ex: Vila, Cidade, PvP, Quest (separar por vírgula)">
+          <small class="input-hint">Opcional - ajuda outros jogadores a encontrar</small>
+        </div>
+
+        <div class="form-group">
+          <label><i class="fas fa-link"></i> Link do Google Drive *</label>
+          <input type="url" id="mapDriveLink" 
+                 placeholder="https://drive.google.com/...">
+          <small class="input-hint">Cole o link público do Google Drive com os arquivos do mapa</small>
+        </div>
+
+        <div class="form-group">
+          <label><i class="fas fa-images"></i> Links dos Prints (Preview) *</label>
+          <textarea id="mapScreenshots" rows="4"
+                    placeholder="Cole os links das imagens (um por linha)
+https://i.imgur.com/exemplo1.png
+https://i.imgur.com/exemplo2.png"></textarea>
+          <small class="input-hint">Pelo menos 1 print. Use Imgur ou similar para hospedar</small>
+        </div>
+
+        <div class="rewards-preview" style="background: rgba(201,168,76,0.1); border: 1px solid rgba(201,168,76,0.3); border-radius: 12px; padding: 1rem; margin-top: 1.5rem;">
+          <strong style="color: var(--gold); display: flex; align-items: center; gap: 0.5rem;">
+            <i class="fas fa-gift"></i> Recompensa ao Aprovar
+          </strong>
+          <p style="margin: 0.5rem 0 0; font-size: 0.9rem; color: var(--text-secondary);">
+            Ao ser aprovado pelo admin, você receberá moedas e tokens!
+          </p>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button class="btn-secondary" id="cancelSubmitMapBtn">
+          <i class="fas fa-times"></i> Cancelar
+        </button>
+        <button class="btn-primary" id="confirmSubmitMapBtn">
+          <i class="fas fa-paper-plane"></i> Enviar para Aprovação
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════
+       MODAL: DETALHES DO MAPA
+  ══════════════════════════════════════════════════════ -->
+  <div class="modal-overlay" id="mapDetailsModal" style="display:none">
+    <div class="modal" style="max-width: 800px;">
+      <div class="modal-header">
+        <h3><i class="fas fa-info-circle"></i> Detalhes do Mapa</h3>
+        <button class="modal-close" id="closeMapDetailsModal"><i class="fas fa-times"></i></button>
+      </div>
+      <div class="modal-body">
+        <div id="mapDetailsContent">
+          <!-- Conteúdo dinâmico -->
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- ─── TOAST ───────────────────────────────────────────────── -->
   <div class="toast-container" id="toastContainer"></div>
 
@@ -395,5 +593,6 @@
   <script type="module" src="js/home.js"></script>
   <script type="module" src="js/quests.js"></script>
   <script type="module" src="js/ranking.js"></script>
+  <script type="module" src="js/maps.js"></script>
 </body>
 </html>
