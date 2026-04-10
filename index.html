@@ -906,10 +906,10 @@
 
     /* ── Loader ──────────────────────────────────────────────── */
     let loaderHidden = false;
-    function hideLoader() { 
+    function hideLoader() {
       if (loaderHidden) return;
       loaderHidden = true;
-      $("pageLoader").classList.add("hide"); 
+      $("pageLoader").classList.add("hide");
     }
 
     /* ── Session management ──────────────────────────────────── */
@@ -924,9 +924,9 @@
 
     /* ── Fallback loader timeout (garante que o loader esconda) ── */
     const loaderTimeout = setTimeout(() => {
-      console.warn("⚠️ Loader timeout atingido - forçando esconder o loader");
+      console.warn("⚠️ Loader timeout - forçando esconder o loader");
       hideLoader();
-    }, 5000); // 5 segundos de timeout
+    }, 5000);
 
     /* ── Auth state change ───────────────────────────────────── */
     onAuthStateChanged(auth, user => {
@@ -1012,7 +1012,7 @@
       setTimeout(() => box.classList.remove("shake"), 500);
     }
 
-    /* ── Show/hide error banners ─────────────────────────── */
+    /* ── Show/hide error banners ─────────────────────────────── */
     function showErr(prefix, msg) {
       const el = $(prefix); const msgEl = $(prefix + "Msg");
       if (msgEl) msgEl.textContent = msg;

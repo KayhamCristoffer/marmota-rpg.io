@@ -57,6 +57,11 @@
         <i class="fas fa-trophy"></i>
         <span>Rankings</span>
       </a>
+      <a href="#" class="nav-item" data-page="maps-admin">
+        <i class="fas fa-map"></i>
+        <span>Mapas</span>
+        <div class="nav-badge" id="pendingMapsCount"></div>
+      </a>
       <div class="nav-divider"></div>
       <a href="#" id="dashboardLink" class="nav-item">
         <i class="fas fa-home"></i>
@@ -251,6 +256,33 @@
       </div>
     </section>
 
+    </section>
+
+    <!-- ── PAGE: MAPS ADMIN ── -->
+    <section class="page" id="page-maps-admin">
+      <div class="page-header">
+        <h2 class="page-title"><i class="fas fa-map"></i> Gestão de Mapas</h2>
+        <div style="display:flex;gap:.6rem;align-items:center">
+          <span class="pending-count-badge" id="mapsAdminCount" style="font-size:.75rem"></span>
+          <button class="btn-refresh" id="refreshMapsBtn" title="Atualizar">
+            <i class="fas fa-sync-alt"></i> Atualizar
+          </button>
+        </div>
+      </div>
+
+      <!-- Abas de filtro -->
+      <div class="ranking-admin-tabs" id="mapsFilterTabs">
+        <button class="ranking-tab active" data-filter="all">&#128505; Todos</button>
+        <button class="ranking-tab" data-filter="pending">&#9203; Pendentes</button>
+        <button class="ranking-tab" data-filter="approved">✅ Aprovados</button>
+        <button class="ranking-tab" data-filter="rejected">❌ Rejeitados</button>
+      </div>
+
+      <div class="maps-admin-list" id="mapsAdminList">
+        <div class="loading-spinner"><i class="fas fa-spinner fa-spin"></i> Carregando mapas...</div>
+      </div>
+    </section>
+
   </main>
 
   <!-- ─── MODAL: CRIAR/EDITAR QUEST ───────────────────────────── -->
@@ -423,6 +455,29 @@
       </div>
       <div class="modal-body text-center">
         <img id="printModalImg" src="" alt="Print" style="max-width:100%; border-radius: 8px;"/>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─── MODAL: REVISAR MAPA ─────────────────────────────────── -->
+  <div class="modal-overlay" id="mapReviewModal" style="display:none">
+    <div class="modal modal-large">
+      <div class="modal-header">
+        <h3 id="mapReviewTitle"><i class="fas fa-map"></i> Revisar Mapa</h3>
+        <button class="modal-close" id="closeMapReviewModal"><i class="fas fa-times"></i></button>
+      </div>
+      <div class="modal-body" id="mapReviewBody">
+        <input type="hidden" id="mapReviewId"/>
+        <!-- Filled dynamically -->
+      </div>
+      <div class="modal-footer">
+        <button class="btn-secondary" id="cancelMapReviewModal">Fechar</button>
+        <button class="btn-danger" id="rejectMapBtn">
+          <i class="fas fa-times-circle"></i> Rejeitar
+        </button>
+        <button class="btn-approve" id="approveMapBtn">
+          <i class="fas fa-check-circle"></i> Aprovar
+        </button>
       </div>
     </div>
   </div>
