@@ -1090,6 +1090,41 @@ export function listenRanking(period = "total", callback) {
 }
 
 /* ════════════════════════════════════════════════════════════════
+   §9b  REAL-TIME LISTENERS – MAPS
+════════════════════════════════════════════════════════════════ */
+
+/**
+ * Escuta TODOS os mapas em tempo real (admin).
+ * callback(maps: array) — ordenado por created_at desc.
+ */
+export function listenAllMaps(callback) {
+  const mapsRef = ref(db, "maps");
+  const handler = (snap) => {
+    let arr = snapToArray(snap);
+    arr.sort((a, b) => (b.created_at || 0) - (a.created_at || 0));
+    callback(arr);
+  };
+  onValue(mapsRef, handler);
+  return () => off(mapsRef, "value", handler);
+}
+
+/**
+ * Escuta mapas PENDENTES em tempo real (admin).
+ * callback(maps: array)
+ */
+export function listenPendingMaps(callback) {
+  const mapsRef = ref(db, "maps");
+  const handler = (snap) => {
+    let arr = snapToArray(snap);
+    arr = arr.filter(m => m.status === "pending");
+    arr.sort((a, b) => (b.created_at || 0) - (a.created_at || 0));
+    callback(arr);
+  };
+  onValue(mapsRef, handler);
+  return () => off(mapsRef, "value", handler);
+}
+
+/* ════════════════════════════════════════════════════════════════
    §10  LEGACY EXPORTS
 ════════════════════════════════════════════════════════════════ */
 export const getUser           = proc_getUser;
