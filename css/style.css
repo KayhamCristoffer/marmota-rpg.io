@@ -4049,3 +4049,21 @@ input, select, textarea { font-family: inherit; }
   border-color: rgba(201,168,76,0.4);
   color: var(--gold);
 }
+
+/* ═══════════════════════════════════════════════════════════════
+   MAPS ADMIN
+═══════════════════════════════════════════════════════════════ */
+.maps-admin-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+.maps-admin-list .submission-item {
+  transition: border-color .2s;
+}
+.maps-admin-list .submission-item:hover {
+  border-color: rgba(201,168,76,.35);
+}
+.status-pending  { background: rgba(251,146,60,.15); color: #fb923c; border: 1px solid rgba(251,146,60,.3); }
+.status-approved { background: rgba(74,222,128,.12); color: #4ade80; border: 1px solid rgba(74,222,128,.25); }
+.status-rejected { background: rgba(248,113,113,.12); color: #f87171; border: 1px solid rgba(248,113,113,.25); }
