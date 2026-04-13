@@ -7,6 +7,8 @@ import {
   submitMap, editMap, getMyMaps, getApprovedMaps, getMapDetails,
   likeMap, favoriteMap, incrementMapDownload, getMapExamples
 } from "../firebase/database.js";
+import { get, ref } from "../firebase/services-config.js";
+import { db } from "../firebase/services-config.js";
 
 let _currentMapFilter = "all";
 let _currentMapSort = "likes";
@@ -372,18 +374,23 @@ async function openEditMapModal(mapId) {
   document.getElementById("submitMapTitle").textContent = "Editar Mapa";
 
   try {
-    const uid = window.RPG?.getFbUser()?.uid;
-    const map = await getMapDetails(mapId, uid);
+    // Buscar mapa diretamente sem incrementar views
+    const mapSnap = await get(ref(db, `maps/${mapId}`));
+    if (!mapSnap.exists()) {
+      throw new Error("Mapa não encontrado");
+    }
+    const map = mapSnap.val();
 
-    document.getElementById("mapTitle").value = map.title;
-    document.getElementById("mapDescription").value = map.description;
+    document.getElementById("mapTitle").value = map.title || "";
+    document.getElementById("mapDescription").value = map.description || "";
     document.getElementById("mapTopics").value = (map.topics || []).join(', ');
-    document.getElementById("mapDriveLink").value = map.driveLink;
+    document.getElementById("mapDriveLink").value = map.driveLink || "";
     document.getElementById("mapScreenshots").value = (map.screenshots || []).join('\n');
 
     modal.style.display = "flex";
   } catch (err) {
-    window.showToast?.("Erro ao carregar mapa", "error");
+    console.error("Erro ao carregar mapa:", err);
+    window.showToast?.("Erro ao carregar mapa: " + err.message, "error");
   }
 }
 

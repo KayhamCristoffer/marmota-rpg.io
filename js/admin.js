@@ -19,7 +19,7 @@ import {
   seedDefaultAchievements,
   listenSubmissions, listenQuests as _listenQuests,
   listenUsers, listenAchievements,
-  listenAllMaps, approveMap, rejectMap
+  getPendingMaps, getAllMaps, approveMap, rejectMap
 } from "../firebase/database.js";
 
 /* ─── Listeners ativos (para cleanup) ───────────────────────── */
@@ -27,9 +27,6 @@ let _unsubSubmissions  = null;
 let _unsubAdminQuests  = null;
 let _unsubUsers        = null;
 let _unsubAchievements = null;
-let _unsubMaps         = null;
-let _mapsFilter        = "all";
-let _lastMapsData      = [];
 
 /* ════════════════════════════════════════════════════════════════
    INICIALIZAÇÃO
@@ -57,9 +54,9 @@ document.addEventListener("DOMContentLoaded", async () => {
       case "submissions":   loadSubmissions();  break;
       case "quests":        loadAdminQuests();  break;
       case "users":         loadUsers();        break;
+      case "maps":          loadAdminMaps("pending"); break;
       case "ranking-admin": setupRankingAdmin(); loadRankingAdmin(); break;
       case "achievements":  loadAchievements(); break;
-      case "maps-admin":    loadMapsAdmin();    break;
     }
   };
 
@@ -94,31 +91,11 @@ document.addEventListener("DOMContentLoaded", async () => {
     if (prev) prev.textContent = e.target.value || "🏆";
   });
 
-  /* Botões de refresh */
+  /* Botões de refresh (força nova assinatura) */
   document.getElementById("refreshSubmissionsBtn") ?.addEventListener("click", loadSubmissions);
   document.getElementById("refreshAdminQuestsBtn") ?.addEventListener("click", loadAdminQuests);
   document.getElementById("refreshUsersBtn")       ?.addEventListener("click", loadUsers);
   document.getElementById("refreshAchievementsBtn")?.addEventListener("click", loadAchievements);
-  document.getElementById("refreshMapsBtn")        ?.addEventListener("click", loadMapsAdmin);
-
-  /* Filtros de mapas */
-  document.getElementById("mapsFilterTabs")?.addEventListener("click", e => {
-    const btn = e.target.closest(".ranking-tab");
-    if (!btn) return;
-    document.querySelectorAll("#mapsFilterTabs .ranking-tab").forEach(b => b.classList.remove("active"));
-    btn.classList.add("active");
-    _mapsFilter = btn.dataset.filter || "all";
-    _renderMapsList(_lastMapsData);
-  });
-
-  /* Modal mapa */
-  document.getElementById("closeMapReviewModal")  ?.addEventListener("click", _closeMapReviewModal);
-  document.getElementById("cancelMapReviewModal") ?.addEventListener("click", _closeMapReviewModal);
-  document.getElementById("mapReviewModal")        ?.addEventListener("click", e => {
-    if (e.target.id === "mapReviewModal") _closeMapReviewModal();
-  });
-  document.getElementById("approveMapBtn")?.addEventListener("click", _doApproveMap);
-  document.getElementById("rejectMapBtn") ?.addEventListener("click", _doRejectMap);
 
   /* Voltar ao dashboard */
   document.getElementById("dashboardLink")?.addEventListener("click", e => {
@@ -886,239 +863,150 @@ function escapeHtml(text) {
 }
 
 /* ════════════════════════════════════════════════════════════════
-   GESTÃO DE MAPAS  –  tempo real via listenAllMaps
+   GERENCIAR MAPAS
 ════════════════════════════════════════════════════════════════ */
-function loadMapsAdmin() {
-  const list = document.getElementById("mapsAdminList");
-  if (!list) return;
-  list.innerHTML = `<div class="loading-spinner">
-    <i class="fas fa-spinner fa-spin"></i> Carregando mapas...</div>`;
+let _currentMapAdminFilter = "pending";
 
-  if (_unsubMaps) { _unsubMaps(); _unsubMaps = null; }
+window.loadAdminMaps = async function(filter = "pending") {
+  _currentMapAdminFilter = filter;
+  const container = document.getElementById("adminMapsList");
+  if (!container) return;
 
-  _unsubMaps = listenAllMaps((maps) => {
-    _lastMapsData = maps;
+  container.innerHTML = '<div class="loading"><i class="fas fa-spinner fa-spin"></i> Carregando...</div>';
 
-    // Update pending badge
-    const pending = maps.filter(m => m.status === "pending").length;
-    const badge   = document.getElementById("pendingMapsCount");
-    const counter = document.getElementById("mapsAdminCount");
-    if (badge)   { badge.textContent   = pending || ""; badge.style.display = pending ? "" : "none"; }
-    if (counter) counter.textContent   = `${maps.length} mapas • ${pending} pendentes`;
+  try {
+    let maps;
+    if (filter === "pending") {
+      maps = await getPendingMaps();
+    } else {
+      const allMaps = await getAllMaps();
+      maps = allMaps.filter(m => m.status === filter);
+    }
 
-    _renderMapsList(maps);
-  });
-}
+    if (maps.length === 0) {
+      container.innerHTML = `<div class="empty-state"><p>Nenhum mapa ${filter}</p></div>`;
+      return;
+    }
 
-function _renderMapsList(maps) {
-  const list = document.getElementById("mapsAdminList");
-  if (!list) return;
+    container.innerHTML = maps.map(map => `
+      <div class="submission-item">
+        <div class="submission-header">
+          <div>
+            <strong>${escapeHtml(map.title)}</strong>
+            <p style="margin: 0.25rem 0; color: var(--text-muted); font-size: 0.85rem;">
+              Por ${escapeHtml(map.authorName)}
+            </p>
+          </div>
+          <span class="submission-date">
+            ${new Date(map.created_at).toLocaleDateString('pt-BR')}
+          </span>
+        </div>
 
-  let filtered = maps;
-  if (_mapsFilter !== "all") filtered = maps.filter(m => m.status === _mapsFilter);
+        <div class="map-preview-admin" style="margin: 1rem 0;">
+          <img src="${map.screenshots[0]}" alt="Preview" style="max-width: 300px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1);">
+        </div>
 
-  if (filtered.length === 0) {
-    const labels = { all: "mapas", pending: "mapas pendentes", approved: "mapas aprovados", rejected: "mapas rejeitados" };
-    list.innerHTML = `<div class="empty-state" style="text-align:center;padding:3rem;color:var(--text-muted)">
-      <i class="fas fa-map" style="font-size:2.5rem;opacity:.3;margin-bottom:1rem;display:block"></i>
-      <p>Nenhum ${labels[_mapsFilter] || "mapa"} encontrado.</p>
-    </div>`;
-    return;
+        <p style="margin: 1rem 0; line-height: 1.6; color: var(--text-secondary);">
+          ${escapeHtml(map.description).substring(0, 200)}${map.description.length > 200 ? '...' : ''}
+        </p>
+
+        ${map.topics && map.topics.length > 0 ? `
+          <div style="margin: 0.75rem 0;">
+            <strong style="font-size: 0.85rem;">Tags:</strong>
+            ${map.topics.map(t => `<span style="background: rgba(201,168,76,0.15); border: 1px solid rgba(201,168,76,0.3); color: var(--gold); padding: 0.25rem 0.5rem; border-radius: 4px; font-size: 0.75rem; margin-right: 0.5rem;">${escapeHtml(t)}</span>`).join('')}
+          </div>
+        ` : ''}
+
+        <div class="submission-actions">
+          <a href="${map.driveLink}" target="_blank" class="btn-secondary">
+            <i class="fas fa-external-link-alt"></i> Ver Drive
+          </a>
+          
+          ${filter === 'pending' ? `
+            <button class="btn-approve-map" data-id="${map.id}">
+              <i class="fas fa-check"></i> Aprovar
+            </button>
+            <button class="btn-reject-map" data-id="${map.id}">
+              <i class="fas fa-times"></i> Rejeitar
+            </button>
+          ` : ''}
+        </div>
+      </div>
+    `).join('');
+
+    // Event listeners
+    container.querySelectorAll('.btn-approve-map').forEach(btn => {
+      btn.addEventListener('click', () => handleApproveMap(btn.dataset.id));
+    });
+
+    container.querySelectorAll('.btn-reject-map').forEach(btn => {
+      btn.addEventListener('click', () => handleRejectMap(btn.dataset.id));
+    });
+
+  } catch (err) {
+    console.error('Erro ao carregar mapas:', err);
+    container.innerHTML = '<div class="empty-state"><p>Erro ao carregar mapas.</p></div>';
   }
-
-  const statusCfg = {
-    pending:  { label: "Pendente",  cls: "status-pending",  icon: "⏳" },
-    approved: { label: "Aprovado",  cls: "status-approved", icon: "✅" },
-    rejected: { label: "Rejeitado", cls: "status-rejected", icon: "❌" },
-  };
-
-  list.innerHTML = filtered.map(m => {
-    const s      = statusCfg[m.status] || statusCfg.pending;
-    const thumb  = (m.screenshots && m.screenshots[0]) ? m.screenshots[0] : "";
-    const date   = m.created_at ? new Date(m.created_at).toLocaleDateString("pt-BR") : "—";
-    const coins  = m.coinsReward  || 0;
-    const tokens = m.tokensReward || 0;
-    return `
-    <div class="submission-item" style="display:flex;flex-wrap:wrap;gap:1rem;align-items:flex-start">
-      ${thumb ? `<img src="${escapeHtml(thumb)}" alt="thumb"
-        style="width:100px;height:70px;object-fit:cover;border-radius:8px;flex-shrink:0"
-        onerror="this.style.display='none'">` : ""}
-      <div style="flex:1;min-width:200px">
-        <div style="display:flex;align-items:center;gap:.5rem;flex-wrap:wrap;margin-bottom:.3rem">
-          <strong style="color:var(--text-primary)">${escapeHtml(m.title || "Sem título")}</strong>
-          <span class="quest-status-badge ${s.cls}" style="font-size:.72rem">${s.icon} ${s.label}</span>
-        </div>
-        <div style="font-size:.78rem;color:var(--text-muted);margin-bottom:.4rem">
-          <i class="fas fa-user" style="margin-right:3px"></i>${escapeHtml(m.authorName || m.authorUid || "—")}
-          &nbsp;•&nbsp;
-          <i class="fas fa-calendar" style="margin-right:3px"></i>${date}
-        </div>
-        <div style="font-size:.78rem;color:var(--text-muted);margin-bottom:.4rem">
-          <i class="fas fa-coins" style="color:var(--gold);margin-right:3px"></i>${coins} moedas
-          &nbsp;•&nbsp;
-          <i class="fas fa-gem" style="color:#60a5fa;margin-right:3px"></i>${tokens} tokens
-          &nbsp;•&nbsp;
-          <i class="fas fa-heart" style="color:#f87171;margin-right:3px"></i>${m.likes || 0}
-          &nbsp;•&nbsp;
-          <i class="fas fa-download" style="color:#4ade80;margin-right:3px"></i>${m.downloads || 0}
-        </div>
-        ${m.topics ? `<div style="font-size:.75rem;color:var(--text-muted)">
-          <i class="fas fa-tags" style="margin-right:3px"></i>${escapeHtml(m.topics)}</div>` : ""}
-        ${m.rejectionReason ? `<div style="font-size:.75rem;color:#f87171;margin-top:.3rem">
-          <i class="fas fa-comment-slash"></i> ${escapeHtml(m.rejectionReason)}</div>` : ""}
-      </div>
-      <div style="display:flex;flex-direction:column;gap:.4rem;flex-shrink:0">
-        <button class="btn-secondary" style="font-size:.78rem;padding:.4rem .7rem"
-          onclick="window._openMapReview('${escapeHtml(m.id)}')">
-          <i class="fas fa-eye"></i> Revisar
-        </button>
-        ${m.driveLink ? `<a href="${escapeHtml(m.driveLink)}" target="_blank" rel="noopener"
-          class="btn-secondary" style="font-size:.78rem;padding:.4rem .7rem;text-decoration:none;display:inline-flex;align-items:center;gap:4px">
-          <i class="fas fa-external-link-alt"></i> Drive
-        </a>` : ""}
-      </div>
-    </div>`;
-  }).join("");
-}
-
-/* ── Abrir modal de revisão de mapa ─── */
-window._openMapReview = async function(mapId) {
-  if (!mapId) return;
-  const modal  = document.getElementById("mapReviewModal");
-  const body   = document.getElementById("mapReviewBody");
-  const hidId  = document.getElementById("mapReviewId");
-  if (!modal || !body || !hidId) return;
-
-  hidId.value = mapId;
-
-  // Busca dados do mapa do cache local
-  const map = _lastMapsData.find(m => m.id === mapId);
-  if (!map) { window.showToast?.("Mapa não encontrado.", "error"); return; }
-
-  const screenshots = Array.isArray(map.screenshots) ? map.screenshots : [];
-  const screenshotsHtml = screenshots.length
-    ? screenshots.map(src =>
-        `<a href="${escapeHtml(src)}" target="_blank" rel="noopener">
-          <img src="${escapeHtml(src)}" alt="screenshot"
-            style="max-width:100%;border-radius:8px;margin-bottom:.5rem;display:block"
-            onerror="this.style.display='none'">
-        </a>`).join("")
-    : `<p style="color:var(--text-muted);font-size:.82rem">Nenhum screenshot enviado.</p>`;
-
-  const date = map.created_at ? new Date(map.created_at).toLocaleString("pt-BR") : "—";
-
-  body.innerHTML = `
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1rem">
-      <div>
-        <p style="margin:0 0 .3rem;font-size:.72rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em">Título</p>
-        <p style="margin:0;font-weight:600">${escapeHtml(map.title)}</p>
-      </div>
-      <div>
-        <p style="margin:0 0 .3rem;font-size:.72rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em">Autor</p>
-        <p style="margin:0">${escapeHtml(map.authorName || map.authorUid || "—")}</p>
-      </div>
-      <div>
-        <p style="margin:0 0 .3rem;font-size:.72rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em">Enviado em</p>
-        <p style="margin:0;font-size:.85rem">${date}</p>
-      </div>
-      <div>
-        <p style="margin:0 0 .3rem;font-size:.72rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em">Status</p>
-        <p style="margin:0">${map.status || "pending"}</p>
-      </div>
-    </div>
-    <div style="margin-bottom:1rem">
-      <p style="margin:0 0 .3rem;font-size:.72rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em">Descrição</p>
-      <p style="margin:0;font-size:.88rem;line-height:1.6">${escapeHtml(map.description || "—")}</p>
-    </div>
-    ${map.topics ? `<div style="margin-bottom:1rem">
-      <p style="margin:0 0 .3rem;font-size:.72rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em">Tópicos</p>
-      <p style="margin:0;font-size:.85rem">${escapeHtml(map.topics)}</p>
-    </div>` : ""}
-    ${map.driveLink ? `<div style="margin-bottom:1rem">
-      <p style="margin:0 0 .3rem;font-size:.72rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em">Link do Drive</p>
-      <a href="${escapeHtml(map.driveLink)}" target="_blank" rel="noopener"
-        style="color:var(--gold);font-size:.85rem;word-break:break-all">${escapeHtml(map.driveLink)}</a>
-    </div>` : ""}
-    <div style="margin-bottom:1rem">
-      <p style="margin:0 0 .6rem;font-size:.72rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em">Recompensas</p>
-      <div style="display:flex;gap:1.5rem">
-        <div>
-          <label style="font-size:.72rem;color:var(--text-muted)">Moedas</label>
-          <input type="number" id="mapRewardCoins" value="${map.coinsReward || 50}" min="0"
-            style="width:100%;padding:.4rem .6rem;border-radius:8px;border:1.5px solid rgba(255,255,255,.12);background:rgba(0,0,0,.3);color:#fff;font-size:.9rem">
-        </div>
-        <div>
-          <label style="font-size:.72rem;color:var(--text-muted)">Tokens</label>
-          <input type="number" id="mapRewardTokens" value="${map.tokensReward || 0}" min="0"
-            style="width:100%;padding:.4rem .6rem;border-radius:8px;border:1.5px solid rgba(255,255,255,.12);background:rgba(0,0,0,.3);color:#fff;font-size:.9rem">
-        </div>
-      </div>
-    </div>
-    <div>
-      <p style="margin:0 0 .4rem;font-size:.72rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em">Screenshots</p>
-      ${screenshotsHtml}
-    </div>`;
-
-  document.getElementById("mapReviewTitle").innerHTML =
-    `<i class="fas fa-map"></i> Revisar: ${escapeHtml(map.title)}`;
-
-  // Mostrar/ocultar botões baseado no status
-  const approveBtn = document.getElementById("approveMapBtn");
-  const rejectBtn  = document.getElementById("rejectMapBtn");
-  if (approveBtn) approveBtn.style.display = map.status === "approved" ? "none" : "";
-  if (rejectBtn)  rejectBtn.style.display  = map.status === "rejected"  ? "none" : "";
-
-  modal.style.display = "flex";
 };
 
-function _closeMapReviewModal() {
-  const modal = document.getElementById("mapReviewModal");
-  if (modal) modal.style.display = "none";
-}
+async function handleApproveMap(mapId) {
+  const coins = prompt("Quantas MOEDAS dar de recompensa?", "50");
+  if (coins === null) return;
 
-async function _doApproveMap() {
-  const mapId     = document.getElementById("mapReviewId")?.value;
-  const coins     = parseInt(document.getElementById("mapRewardCoins")?.value  || "50", 10);
-  const tokens    = parseInt(document.getElementById("mapRewardTokens")?.value || "0",  10);
-  if (!mapId) return;
-
-  const btn   = document.getElementById("approveMapBtn");
-  const origH = btn?.innerHTML;
-  if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> Aprovando...'; }
+  const tokens = prompt("Quantos TOKENS dar de recompensa?", "10");
+  if (tokens === null) return;
 
   try {
-    const user = window.RPG?.getFbUser();
-    await approveMap(mapId, user?.uid, { coinsReward: coins, tokensReward: tokens });
-    window.showToast?.("✅ Mapa aprovado e recompensas concedidas!", "success");
-    _closeMapReviewModal();
+    const adminUid = window.RPG?.getFbUser()?.uid;
+    if (!adminUid) {
+      window.showToast?.("Erro: usuário não autenticado", "error");
+      return;
+    }
+
+    await approveMap(mapId, adminUid, {
+      coins: parseInt(coins) || 50,
+      tokens: parseInt(tokens) || 10
+    });
+
+    window.showToast?.("✅ Mapa aprovado! Recompensa concedida", "success");
+    await loadAdminMaps(_currentMapAdminFilter);
   } catch (err) {
-    console.error("Erro ao aprovar mapa:", err);
+    console.error('Erro ao aprovar mapa:', err);
     window.showToast?.("Erro ao aprovar mapa: " + err.message, "error");
-  } finally {
-    if (btn) { btn.disabled = false; btn.innerHTML = origH; }
   }
 }
 
-async function _doRejectMap() {
-  const mapId  = document.getElementById("mapReviewId")?.value;
-  if (!mapId) return;
-
-  const reason = prompt("Motivo da rejeição (opcional):");
-  if (reason === null) return; // cancelou
-
-  const btn   = document.getElementById("rejectMapBtn");
-  const origH = btn?.innerHTML;
-  if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> Rejeitando...'; }
+async function handleRejectMap(mapId) {
+  const reason = prompt("Motivo da rejeição:");
+  if (!reason) return;
 
   try {
-    const user = window.RPG?.getFbUser();
-    await rejectMap(mapId, user?.uid, reason || "Sem motivo informado");
-    window.showToast?.("⚠️ Mapa rejeitado.", "warning");
-    _closeMapReviewModal();
+    const adminUid = window.RPG?.getFbUser()?.uid;
+    if (!adminUid) {
+      window.showToast?.("Erro: usuário não autenticado", "error");
+      return;
+    }
+
+    await rejectMap(mapId, adminUid, reason);
+
+    window.showToast?.("❌ Mapa rejeitado", "success");
+    await loadAdminMaps(_currentMapAdminFilter);
   } catch (err) {
-    console.error("Erro ao rejeitar mapa:", err);
+    console.error('Erro ao rejeitar mapa:', err);
     window.showToast?.("Erro ao rejeitar mapa: " + err.message, "error");
-  } finally {
-    if (btn) { btn.disabled = false; btn.innerHTML = origH; }
   }
 }
+
+// Event listeners para filtros de mapas
+document.querySelectorAll('[data-map-admin-filter]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('[data-map-admin-filter]').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    loadAdminMaps(btn.dataset.mapAdminFilter);
+  });
+});
+
+// Refresh button
+document.getElementById("refreshAdminMapsBtn")?.addEventListener("click", () => {
+  loadAdminMaps(_currentMapAdminFilter);
+});

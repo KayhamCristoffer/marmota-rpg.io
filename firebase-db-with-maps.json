@@ -1,0 +1,921 @@
+{
+  "achievements": {
+    "-Oo5cxSL3DSYceLWbhbb": {
+      "category": "quests",
+      "coinsBonus": 10,
+      "created_at": 1773932894111,
+      "description": "Complete sua primeira quest e entre para a história!",
+      "icon": "🐾",
+      "level": 1,
+      "name": "Primeiros Passos",
+      "questsRequired": 1,
+      "xpBonus": 50
+    },
+    "-Oo5cxYBV69oNEnoCMTH": {
+      "category": "quests",
+      "coinsBonus": 25,
+      "created_at": 1773932894485,
+      "description": "Complete 5 quests e mostre que você está comprometido.",
+      "icon": "📚",
+      "level": 1,
+      "name": "Aprendiz",
+      "questsRequired": 5,
+      "xpBonus": 100
+    },
+    "-Oo5cx_X57NNuMvnffu1": {
+      "category": "quests",
+      "coinsBonus": 50,
+      "created_at": 1773932894635,
+      "description": "Complete 10 quests — a aventura está apenas começando!",
+      "icon": "⚔️",
+      "level": 2,
+      "name": "Aventureiro",
+      "questsRequired": 10,
+      "xpBonus": 200
+    },
+    "-Oo5cxbsRm2l_tcylDEX": {
+      "category": "quests",
+      "coinsBonus": 100,
+      "created_at": 1773932894785,
+      "description": "Complete 25 quests e prove seu valor em batalha.",
+      "icon": "🗡️",
+      "level": 3,
+      "name": "Guerreiro",
+      "questsRequired": 25,
+      "xpBonus": 350
+    },
+    "-Oo5cxeBnqM9oMvcSgT1": {
+      "category": "quests",
+      "coinsBonus": 200,
+      "created_at": 1773932894933,
+      "description": "50 quests concluídas — você é um verdadeiro veterano!",
+      "icon": "🛡️",
+      "level": 5,
+      "name": "Veterano",
+      "questsRequired": 50,
+      "xpBonus": 500
+    },
+    "-Oo5cxgYHnjgHvavwke_": {
+      "category": "quests",
+      "coinsBonus": 350,
+      "created_at": 1773932895084,
+      "description": "100 quests concluídas. Você está entre os melhores!",
+      "icon": "💎",
+      "level": 7,
+      "name": "Elite",
+      "questsRequired": 100,
+      "xpBonus": 800
+    },
+    "-Oo5cxirGhoZ9ALeioM7": {
+      "category": "quests",
+      "coinsBonus": 600,
+      "created_at": 1773932895232,
+      "description": "250 quests concluídas. Sua lenda é conhecida em toda a terra!",
+      "icon": "🌟",
+      "level": 10,
+      "name": "Lendário",
+      "questsRequired": 250,
+      "xpBonus": 1500
+    },
+    "-Oo5cxlBXdiYMLU1xyz6": {
+      "category": "quests",
+      "coinsBonus": 1000,
+      "created_at": 1773932895381,
+      "description": "500 quests concluídas. Nenhum mortal chegou tão longe.",
+      "icon": "👑",
+      "level": 15,
+      "name": "Imortal",
+      "questsRequired": 500,
+      "xpBonus": 3000
+    },
+    "-Oo5cxnXBvjQkieMPsXh": {
+      "category": "level",
+      "coinsBonus": 50,
+      "created_at": 1773932895532,
+      "description": "Alcance o Nível 5 e desbloqueie novos desafios.",
+      "icon": "⭐",
+      "level": 5,
+      "name": "Nível 5",
+      "questsRequired": 0,
+      "xpBonus": 150
+    },
+    "-Oo5cxpwEvBsGeXYOQ6I": {
+      "category": "level",
+      "coinsBonus": 100,
+      "created_at": 1773932895685,
+      "description": "Alcance o Nível 10 — metade do caminho para a grandeza!",
+      "icon": "🌙",
+      "level": 10,
+      "name": "Nível 10",
+      "questsRequired": 0,
+      "xpBonus": 300
+    },
+    "-Oo5cxsHYd51kDUoaxir": {
+      "category": "level",
+      "coinsBonus": 250,
+      "created_at": 1773932895835,
+      "description": "Nível 20 alcançado. Você transcendeu os limites comuns.",
+      "icon": "☀️",
+      "level": 20,
+      "name": "Nível 20",
+      "questsRequired": 0,
+      "xpBonus": 600
+    },
+    "-Oo5cxufjX55bMId2SPW": {
+      "category": "level",
+      "coinsBonus": 750,
+      "created_at": 1773932895988,
+      "description": "Nível 50! Um dos adventureiros mais poderosos do reino.",
+      "icon": "🔥",
+      "level": 50,
+      "name": "Nível 50",
+      "questsRequired": 0,
+      "xpBonus": 2000
+    },
+    "-Oo5cxx-BbArDWrz4kM-": {
+      "category": "daily",
+      "coinsBonus": 70,
+      "created_at": 1773932896137,
+      "description": "Complete quests diárias por 7 dias seguidos.",
+      "icon": "🌅",
+      "level": 2,
+      "name": "Madrugador",
+      "questsRequired": 7,
+      "xpBonus": 200
+    },
+    "-Oo5cxzKfObTH6S8sOGO": {
+      "category": "daily",
+      "coinsBonus": 150,
+      "created_at": 1773932896286,
+      "description": "30 quests diárias concluídas — a disciplina é sua força.",
+      "icon": "⚡",
+      "level": 4,
+      "name": "Rotina de Ferro",
+      "questsRequired": 30,
+      "xpBonus": 400
+    },
+    "-Oo5cy0fa6veXAp0rcwr": {
+      "category": "weekly",
+      "coinsBonus": 100,
+      "created_at": 1773932896437,
+      "description": "Complete 4 quests semanais consecutivas.",
+      "icon": "📅",
+      "level": 3,
+      "name": "Semanal Perfeito",
+      "questsRequired": 4,
+      "xpBonus": 250
+    },
+    "-Oo5cy3-7kxorJ48ZHBV": {
+      "category": "weekly",
+      "coinsBonus": 200,
+      "created_at": 1773932896585,
+      "description": "20 quests semanais concluídas — dominante nas semanas!",
+      "icon": "🏅",
+      "level": 6,
+      "name": "Mestre Semanal",
+      "questsRequired": 20,
+      "xpBonus": 500
+    },
+    "-Oo5cy5LxAWfIu7uIMNW": {
+      "category": "monthly",
+      "coinsBonus": 200,
+      "created_at": 1773932896735,
+      "description": "Complete 3 quests mensais — raridade extraordinária!",
+      "icon": "🗓️",
+      "level": 5,
+      "name": "Mensal de Elite",
+      "questsRequired": 3,
+      "xpBonus": 400
+    },
+    "-Oo5cy7tX3fOew-lVI3W": {
+      "category": "monthly",
+      "coinsBonus": 500,
+      "created_at": 1773932896898,
+      "description": "12 quests mensais — um ano inteiro de dedicação!",
+      "icon": "🏆",
+      "level": 10,
+      "name": "Titã Mensal",
+      "questsRequired": 12,
+      "xpBonus": 1000
+    },
+    "-Oo5cyAJHYB_tT_tZNzZ": {
+      "category": "event",
+      "coinsBonus": 100,
+      "created_at": 1773932897053,
+      "description": "Participe do seu primeiro evento especial.",
+      "icon": "🎯",
+      "level": 1,
+      "name": "Caçador de Eventos",
+      "questsRequired": 1,
+      "xpBonus": 300
+    },
+    "-Oo5cyCfTcpGVEd4vE3G": {
+      "category": "event",
+      "coinsBonus": 250,
+      "created_at": 1773932897204,
+      "description": "Complete 5 quests de eventos — colecionador de raridades!",
+      "icon": "🎪",
+      "level": 3,
+      "name": "Evento Lendário",
+      "questsRequired": 5,
+      "xpBonus": 600
+    },
+    "-Oo5cyF4mYQbPthMr1KS": {
+      "category": "special",
+      "coinsBonus": 0,
+      "created_at": 1773932897358,
+      "description": "Acumule 500 moedas — a fortuna sorri para os determinados.",
+      "icon": "💰",
+      "level": 3,
+      "name": "Colecionador",
+      "questsRequired": 15,
+      "xpBonus": 250
+    },
+    "-Oo5cyHUsRyqcxwhazWE": {
+      "category": "special",
+      "coinsBonus": 0,
+      "created_at": 1773932897512,
+      "description": "Acumule 2000 moedas — a riqueza do reino está em suas mãos!",
+      "icon": "💎",
+      "level": 8,
+      "name": "Milionário do Reino",
+      "questsRequired": 50,
+      "xpBonus": 800
+    }
+  },
+  "meta": {
+    "lastReset_daily": 1774621025029,
+    "lastReset_monthly": "2024-02-01T00:00:00Z",
+    "lastReset_weekly": "2024-03-02T00:00:00Z",
+    "version": "2.0.0"
+  },
+  "quests": {
+    "-OoAe86P-KipkQBSYBje": {
+      "created_at": 1774017090085,
+      "created_by": "F69XMBOumJSiuBvQm3c63HyJAjy2",
+      "currentUsers": 8,
+      "description": "Curta 1 vídeo dos Marmotas",
+      "imageRequired": true,
+      "isActive": true,
+      "minLevel": 1,
+      "rewardCoins": 1,
+      "rewardXP": 1,
+      "title": "Like!",
+      "type": "daily"
+    },
+    "-OoAeDkltmKTyC3TdtX_": {
+      "created_at": 1774017113212,
+      "created_by": "F69XMBOumJSiuBvQm3c63HyJAjy2",
+      "currentUsers": 5,
+      "description": "Compartilhe 1 vídeo dos Marmotas!",
+      "imageRequired": true,
+      "isActive": true,
+      "minLevel": 1,
+      "rewardCoins": 10,
+      "rewardXP": 10,
+      "title": "Compartilha!",
+      "type": "daily"
+    },
+    "-OoAePQODKUG2XsG7lzn": {
+      "created_at": 1774017160996,
+      "created_by": "F69XMBOumJSiuBvQm3c63HyJAjy2",
+      "currentUsers": 5,
+      "description": "Seja um membro do Discord!",
+      "eventName": "DISCORD",
+      "imageRequired": true,
+      "isActive": true,
+      "minLevel": 1,
+      "rewardCoins": 100,
+      "rewardXP": 100,
+      "title": "Seja Membro do Discord!",
+      "type": "event",
+      "updated_at": 1774017210860
+    },
+    "-OoAeYCtA-HARXyoFMU_": {
+      "created_at": 1774017196996,
+      "created_by": "F69XMBOumJSiuBvQm3c63HyJAjy2",
+      "currentUsers": 3,
+      "description": "De um Boost Nitro para o Discord!",
+      "imageRequired": true,
+      "isActive": true,
+      "minLevel": 1,
+      "rewardCoins": 500,
+      "rewardXP": 500,
+      "title": "Discord NITRO!",
+      "type": "monthly"
+    },
+    "-OoAo7XpR2u5VDFaf11e": {
+      "created_at": 1774019709182,
+      "created_by": "F69XMBOumJSiuBvQm3c63HyJAjy2",
+      "currentUsers": 5,
+      "description": "Jogue em call com os seus amigos np discord!",
+      "imageRequired": true,
+      "isActive": true,
+      "minLevel": 1,
+      "rewardCoins": 50,
+      "rewardXP": 50,
+      "title": "Jogar com a galera!",
+      "type": "weekly"
+    }
+  },
+  "rankings": {
+    "4PBGd1DhBaflMulItrtrHXoJXcw2": {
+      "coinsDaily": 0,
+      "coinsMonthly": 5,
+      "coinsTotal": 5,
+      "coinsWeekly": 5,
+      "uid": "4PBGd1DhBaflMulItrtrHXoJXcw2",
+      "updated_at": 1773970951028
+    },
+    "F69XMBOumJSiuBvQm3c63HyJAjy2": {
+      "coinsDaily": 2760,
+      "coinsMonthly": 3810,
+      "coinsTotal": 4110,
+      "coinsWeekly": 3110,
+      "uid": "F69XMBOumJSiuBvQm3c63HyJAjy2",
+      "updated_at": 1774621444772
+    },
+    "Z569uIbuNrXTN90iZChDwvkmyko1": {
+      "coinsDaily": 0,
+      "coinsMonthly": 213,
+      "coinsTotal": 213,
+      "coinsWeekly": 213,
+      "uid": "Z569uIbuNrXTN90iZChDwvkmyko1",
+      "updated_at": 1774310154878
+    },
+    "smVJWJNgptOGcSY4ocZzvCt7gMf2": {
+      "coinsDaily": 223,
+      "coinsMonthly": 223,
+      "coinsTotal": 223,
+      "coinsWeekly": 223,
+      "uid": "smVJWJNgptOGcSY4ocZzvCt7gMf2",
+      "updated_at": 1775753406772
+    },
+    "ucmrzO8w1CUAAyN8Jun1kyvmZIv2": {
+      "coinsDaily": 1,
+      "coinsMonthly": 1,
+      "coinsTotal": 1,
+      "coinsWeekly": 1,
+      "uid": "ucmrzO8w1CUAAyN8Jun1kyvmZIv2",
+      "updated_at": 1774724276964
+    }
+  },
+  "submissions": {
+    "-Oo1f94tB1W2x_KlCl1K": {
+      "created_at": 1773866360684,
+      "printUrl": "https://prnt.sc/pvAsIUBO9EBU",
+      "questId": "quest_id_003",
+      "questTitle": "t3",
+      "reviewedAt": 1773866381503,
+      "reviewedBy": "F69XMBOumJSiuBvQm3c63HyJAjy2",
+      "rewardCoins": 3,
+      "rewardXP": 3,
+      "status": "approved",
+      "uid": "F69XMBOumJSiuBvQm3c63HyJAjy2",
+      "userQuestId": "-Oo1eor3qE3vmwZ7mNW-"
+    },
+    "-Oo7M7IIaDTB3AK4jM6O": {
+      "created_at": 1773961887845,
+      "printUrl": "https://prnt.sc/ZRV5K2GaK5G5",
+      "questId": "-Oo1fNA2kb8LeY9RmUdi",
+      "questTitle": "t5",
+      "reviewedAt": 1773970949909,
+      "reviewedBy": "F69XMBOumJSiuBvQm3c63HyJAjy2",
+      "rewardCoins": 5,
+      "rewardXP": 5,
+      "status": "approved",
+      "uid": "4PBGd1DhBaflMulItrtrHXoJXcw2",
+      "userQuestId": "-Oo6BtRUUXCYULpOEGj9"
+    },
+    "-OoRgQf12PG7k62KWnQD": {
+      "created_at": 1774302901415,
+      "printUrl": "https://prnt.sc/WX07cDQI8I_w",
+      "questId": "-OoAe86P-KipkQBSYBje",
+      "questTitle": "Like!",
+      "reviewedAt": 1774302919436,
+      "reviewedBy": "F69XMBOumJSiuBvQm3c63HyJAjy2",
+      "rewardCoins": 1,
+      "rewardXP": 1,
+      "status": "approved",
+      "uid": "Z569uIbuNrXTN90iZChDwvkmyko1",
+      "userQuestId": "-OoRfjFE_3W6Mqs0sv5o"
+    },
+    "-OoRh1ORbpipmMSIWK9V": {
+      "created_at": 1774303060033,
+      "printUrl": "https://prnt.sc/uqIyaIDd1lA7",
+      "questId": "-OoAePQODKUG2XsG7lzn",
+      "questTitle": "Seja Membro do Discord!",
+      "reviewedAt": 1774310154027,
+      "reviewedBy": "4PBGd1DhBaflMulItrtrHXoJXcw2",
+      "rewardCoins": 100,
+      "rewardXP": 100,
+      "status": "approved",
+      "uid": "Z569uIbuNrXTN90iZChDwvkmyko1",
+      "userQuestId": "-OoRfhKnxbfnrGxfQpoU"
+    },
+    "-OokT2mtxuCr0PO7c1An": {
+      "created_at": 1774634679768,
+      "printUrl": "https://prnt.sc/Efm5yfC1sRos",
+      "questId": "-OoAe86P-KipkQBSYBje",
+      "questTitle": "Like!",
+      "reviewedAt": 1774724275705,
+      "reviewedBy": "4PBGd1DhBaflMulItrtrHXoJXcw2",
+      "rewardCoins": 1,
+      "rewardXP": 1,
+      "status": "approved",
+      "uid": "ucmrzO8w1CUAAyN8Jun1kyvmZIv2",
+      "userQuestId": "-OokRO_PsLWx3ZxPi2od"
+    },
+    "-Op2jhEnP5-Kd9ZOl851": {
+      "created_at": 1774958073003,
+      "printUrl": "https://prnt.sc/Hkgzwt2vDTBL",
+      "questId": "-OoAe86P-KipkQBSYBje",
+      "questTitle": "Like!",
+      "reviewedAt": 1775753393711,
+      "reviewedBy": "F69XMBOumJSiuBvQm3c63HyJAjy2",
+      "rewardCoins": 1,
+      "rewardXP": 1,
+      "status": "approved",
+      "uid": "smVJWJNgptOGcSY4ocZzvCt7gMf2",
+      "userQuestId": "-Op2hw9S7nnliyj-nLBd"
+    },
+    "-Op2kVZkOyobP_ASXtpg": {
+      "created_at": 1774958283240,
+      "printUrl": "https://prnt.sc/FwaUic1VIzID",
+      "questId": "-OoAeDkltmKTyC3TdtX_",
+      "questTitle": "Compartilha!",
+      "reviewedAt": 1775753397390,
+      "reviewedBy": "F69XMBOumJSiuBvQm3c63HyJAjy2",
+      "rewardCoins": 10,
+      "rewardXP": 10,
+      "status": "approved",
+      "uid": "smVJWJNgptOGcSY4ocZzvCt7gMf2",
+      "userQuestId": "-Op2hwWoXTwY1Os_TRVZ"
+    },
+    "-Op2lCposyDmKDTsHDxI": {
+      "created_at": 1774958468652,
+      "printUrl": "https://prnt.sc/DQMoOyZGCwvj",
+      "questId": "-OoAePQODKUG2XsG7lzn",
+      "questTitle": "Seja Membro do Discord!",
+      "reviewedAt": 1775753405846,
+      "reviewedBy": "F69XMBOumJSiuBvQm3c63HyJAjy2",
+      "rewardCoins": 100,
+      "rewardXP": 100,
+      "status": "approved",
+      "uid": "smVJWJNgptOGcSY4ocZzvCt7gMf2",
+      "userQuestId": "-Op2kaGPnOVhlfTKSx3L"
+    }
+  },
+  "userQuests": {
+    "4PBGd1DhBaflMulItrtrHXoJXcw2": {
+      "-Oo6BtRUUXCYULpOEGj9": {
+        "completedAt": 1773970950067,
+        "printUrl": "https://prnt.sc/ZRV5K2GaK5G5",
+        "questId": "-Oo1fNA2kb8LeY9RmUdi",
+        "questTitle": "t5",
+        "questType": "daily",
+        "rewardCoins": 5,
+        "rewardXP": 5,
+        "status": "completed",
+        "submittedAt": 1773961887678,
+        "takenAt": 1773942428371
+      },
+      "-Oo6Btvefg5EkctXQdpo": {
+        "questId": "-Oo1fKoA68eLeUKeSQWR",
+        "questTitle": "t4",
+        "questType": "daily",
+        "rewardCoins": 4,
+        "rewardXP": 4,
+        "status": "active",
+        "takenAt": 1773942430366
+      },
+      "-Oo6BvdDbo_GSGMm-Akd": {
+        "questId": "quest_id_003",
+        "questTitle": "t3",
+        "questType": "daily",
+        "rewardCoins": 3,
+        "rewardXP": 3,
+        "status": "active",
+        "takenAt": 1773942437378
+      },
+      "-OoDXFO8A30RXqJ7aTvQ": {
+        "questId": "-OoAo7XpR2u5VDFaf11e",
+        "questTitle": "Jogar com a galera!",
+        "questType": "weekly",
+        "rewardCoins": 50,
+        "rewardXP": 50,
+        "status": "active",
+        "takenAt": 1774065467678
+      },
+      "-OoDXF_6ThML7EWLq47U": {
+        "questId": "-OoAeYCtA-HARXyoFMU_",
+        "questTitle": "Discord NITRO!",
+        "questType": "monthly",
+        "rewardCoins": 500,
+        "rewardXP": 500,
+        "status": "active",
+        "takenAt": 1774065468444
+      },
+      "-OoDXGNyiZVE1JBhfMXV": {
+        "questId": "-OoAePQODKUG2XsG7lzn",
+        "questTitle": "Seja Membro do Discord!",
+        "questType": "event",
+        "rewardCoins": 100,
+        "rewardXP": 100,
+        "status": "active",
+        "takenAt": 1774065471763
+      },
+      "-OoDXH1GreI84gUBg1NG": {
+        "questId": "-OoAeDkltmKTyC3TdtX_",
+        "questTitle": "Compartilha!",
+        "questType": "daily",
+        "rewardCoins": 10,
+        "rewardXP": 10,
+        "status": "active",
+        "takenAt": 1774065474406
+      },
+      "-OoDXHvC5JQ1xwHnieyC": {
+        "questId": "-OoAe86P-KipkQBSYBje",
+        "questTitle": "Like!",
+        "questType": "daily",
+        "rewardCoins": 1,
+        "rewardXP": 1,
+        "status": "active",
+        "takenAt": 1774065478050
+      }
+    },
+      "-Oo1eor3qE3vmwZ7mNW-": {
+        "completedAt": 1773866381713,
+        "printUrl": "https://prnt.sc/pvAsIUBO9EBU",
+        "questId": "quest_id_003",
+        "questTitle": "t3",
+        "questType": "daily",
+        "rewardCoins": 3,
+        "rewardXP": 3,
+        "status": "completed",
+        "submittedAt": 1773866360511,
+        "takenAt": 1773866273999
+      }
+    },
+    "Sv5D4exdwZXZa8aTI32QyGWTiNE2": {
+      "-OoRfctNtpDAzluDkGE5": {
+        "questId": "-OoAo7XpR2u5VDFaf11e",
+        "questTitle": "Jogar com a galera!",
+        "questType": "weekly",
+        "rewardCoins": 50,
+        "rewardXP": 50,
+        "status": "active",
+        "takenAt": 1774302694934
+      }
+    },
+    "V4EylT36V8ffKxplBWqU7fSa47W2": {
+      "-OojkpkoHrI4w6rmPwOZ": {
+        "questId": "-OoAe86P-KipkQBSYBje",
+        "questTitle": "Like!",
+        "questType": "daily",
+        "rewardCoins": 1,
+        "rewardXP": 1,
+        "status": "active",
+        "takenAt": 1774622825595
+      },
+      "-OojkqV9sUQf6VSRv9Oi": {
+        "questId": "-OoAeDkltmKTyC3TdtX_",
+        "questTitle": "Compartilha!",
+        "questType": "daily",
+        "rewardCoins": 10,
+        "rewardXP": 10,
+        "status": "active",
+        "takenAt": 1774622828625
+      },
+      "-OojkrX7qpK1mI6sgQcK": {
+        "questId": "-OoAePQODKUG2XsG7lzn",
+        "questTitle": "Seja Membro do Discord!",
+        "questType": "event",
+        "rewardCoins": 100,
+        "rewardXP": 100,
+        "status": "active",
+        "takenAt": 1774622832847
+      }
+    },
+    "Z569uIbuNrXTN90iZChDwvkmyko1": {
+      "-OoRfdvnPGWbIYdfEbnE": {
+        "questId": "-OoAo7XpR2u5VDFaf11e",
+        "questTitle": "Jogar com a galera!",
+        "questType": "weekly",
+        "rewardCoins": 50,
+        "rewardXP": 50,
+        "status": "active",
+        "takenAt": 1774302697688
+      },
+      "-OoRffbIo-MUozq4Apfn": {
+        "questId": "-OoAeYCtA-HARXyoFMU_",
+        "questTitle": "Discord NITRO!",
+        "questType": "monthly",
+        "rewardCoins": 500,
+        "rewardXP": 500,
+        "status": "active",
+        "takenAt": 1774302704568
+      },
+      "-OoRfhKnxbfnrGxfQpoU": {
+        "completedAt": 1774310154244,
+        "printUrl": "https://prnt.sc/uqIyaIDd1lA7",
+        "questId": "-OoAePQODKUG2XsG7lzn",
+        "questTitle": "Seja Membro do Discord!",
+        "questType": "event",
+        "rewardCoins": 100,
+        "rewardXP": 100,
+        "status": "completed",
+        "submittedAt": 1774303059888,
+        "takenAt": 1774302711640
+      },
+      "-OoRfiUYmKSk1Ge_9p19": {
+        "questId": "-OoAeDkltmKTyC3TdtX_",
+        "questTitle": "Compartilha!",
+        "questType": "daily",
+        "rewardCoins": 10,
+        "rewardXP": 10,
+        "status": "active",
+        "takenAt": 1774302716360
+      },
+      "-OoRfjFE_3W6Mqs0sv5o": {
+        "completedAt": 1774302919586,
+        "printUrl": "https://prnt.sc/WX07cDQI8I_w",
+        "questId": "-OoAe86P-KipkQBSYBje",
+        "questTitle": "Like!",
+        "questType": "daily",
+        "rewardCoins": 1,
+        "rewardXP": 1,
+        "status": "completed",
+        "submittedAt": 1774302901292,
+        "takenAt": 1774302719476
+      }
+    },
+    "lPNI95E9SseQnwP9Yeb6uYBxM713": {
+      "-OoSDpQl9EAd7kncrZXX": {
+        "questId": "-OoAeDkltmKTyC3TdtX_",
+        "questTitle": "Compartilha!",
+        "questType": "daily",
+        "rewardCoins": 10,
+        "rewardXP": 10,
+        "status": "active",
+        "takenAt": 1774311920677
+      }
+    },
+    "smVJWJNgptOGcSY4ocZzvCt7gMf2": {
+      "-Op2hw9S7nnliyj-nLBd": {
+        "completedAt": 1775753393861,
+        "printUrl": "https://prnt.sc/Hkgzwt2vDTBL",
+        "questId": "-OoAe86P-KipkQBSYBje",
+        "questTitle": "Like!",
+        "questType": "daily",
+        "rewardCoins": 1,
+        "rewardXP": 1,
+        "status": "completed",
+        "submittedAt": 1774958072812,
+        "takenAt": 1774957609813
+      },
+      "-Op2hwWoXTwY1Os_TRVZ": {
+        "completedAt": 1775753397539,
+        "printUrl": "https://prnt.sc/FwaUic1VIzID",
+        "questId": "-OoAeDkltmKTyC3TdtX_",
+        "questTitle": "Compartilha!",
+        "questType": "daily",
+        "rewardCoins": 10,
+        "rewardXP": 10,
+        "status": "completed",
+        "submittedAt": 1774958283073,
+        "takenAt": 1774957611308
+      },
+      "-Op2kaGPnOVhlfTKSx3L": {
+        "completedAt": 1775753405993,
+        "printUrl": "https://prnt.sc/DQMoOyZGCwvj",
+        "questId": "-OoAePQODKUG2XsG7lzn",
+        "questTitle": "Seja Membro do Discord!",
+        "questType": "event",
+        "rewardCoins": 100,
+        "rewardXP": 100,
+        "status": "completed",
+        "submittedAt": 1774958468483,
+        "takenAt": 1774958306578
+      }
+    },
+    "ucmrzO8w1CUAAyN8Jun1kyvmZIv2": {
+      "-OokRO_PsLWx3ZxPi2od": {
+        "completedAt": 1774724275884,
+        "printUrl": "https://prnt.sc/Efm5yfC1sRos",
+        "questId": "-OoAe86P-KipkQBSYBje",
+        "questTitle": "Like!",
+        "questType": "daily",
+        "rewardCoins": 1,
+        "rewardXP": 1,
+        "status": "completed",
+        "submittedAt": 1774634679527,
+        "takenAt": 1774634244729
+      }
+    }
+  },
+  "users": {
+    "4PBGd1DhBaflMulItrtrHXoJXcw2": {
+      "badges": [
+        "-Oo5cxSL3DSYceLWbhbb",
+        "-Oo5cyAJHYB_tT_tZNzZ",
+        "-Oo6N1L64FPZPV5lsZx5"
+      ],
+      "coins": 117,
+      "coinsDaily": 117,
+      "coinsMonthly": 117,
+      "coinsWeekly": 117,
+      "created_at": 1773942410380,
+      "email": "humireihanatei@gmail.com",
+      "iconUrl": "🔮",
+      "level": 3,
+      "nickname": "Maimai",
+      "photoURL": "",
+      "role": "admin",
+      "uid": "4PBGd1DhBaflMulItrtrHXoJXcw2",
+      "updated_at": 1773970950219,
+      "username": "Maimai",
+      "xp": 357
+    },
+    "8Krt3tqE4ORIKk8T3BNAVUPbrrr2": {
+      "coins": 0,
+      "coinsDaily": 0,
+      "coinsMonthly": 0,
+      "coinsWeekly": 0,
+      "created_at": 1774302692411,
+      "email": "gustavocostaferreira20@gmail.com",
+      "iconUrl": "",
+      "level": 1,
+      "nickname": "Aventureiro",
+      "photoURL": "",
+      "role": "user",
+      "uid": "8Krt3tqE4ORIKk8T3BNAVUPbrrr2",
+      "username": "Aventureiro",
+      "xp": 0
+    },
+    "F69XMBOumJSiuBvQm3c63HyJAjy2": {
+      "badges": [
+        "first_quest",
+        "bronze",
+        "-Oo5cxnXBvjQkieMPsXh",
+        "-Oo5cxSL3DSYceLWbhbb",
+        "-Oo5cyAJHYB_tT_tZNzZ",
+        "-Oo6N1L64FPZPV5lsZx5",
+        "-Oo5cy5LxAWfIu7uIMNW",
+        "-Oo5cy0fa6veXAp0rcwr",
+        "-Oo5cxYBV69oNEnoCMTH",
+        "-Oo5cyCfTcpGVEd4vE3G",
+        "-Oo5cxpwEvBsGeXYOQ6I",
+        "-Oo5cxx-BbArDWrz4kM-",
+        "-Oo5cx_X57NNuMvnffu1",
+        "-Oo5cxsHYd51kDUoaxir",
+        "-Oo5cy7tX3fOew-lVI3W"
+      ],
+      "coins": 4110,
+      "coinsDaily": 2760,
+      "coinsMonthly": 3810,
+      "coinsWeekly": 3110,
+      "created_at": "2024-03-05T00:00:00Z",
+      "email": "kayhamoliveira98@gmail.com",
+      "iconUrl": "👑",
+      "level": 28,
+      "nickname": "Hey Warrior",
+      "photoURL": "",
+      "role": "admin",
+      "uid": "F69XMBOumJSiuBvQm3c63HyJAjy2",
+      "updated_at": 1774621444471,
+      "username": "Kayham",
+      "xp": 5280
+    },
+    "Sv5D4exdwZXZa8aTI32QyGWTiNE2": {
+      "coins": 0,
+      "coinsDaily": 0,
+      "coinsMonthly": 0,
+      "coinsWeekly": 0,
+      "created_at": 1774302651334,
+      "email": "gray.lukka@gmail.com",
+      "iconUrl": "🦊",
+      "level": 1,
+      "nickname": "Link_Pillow",
+      "photoURL": "",
+      "role": "user",
+      "uid": "Sv5D4exdwZXZa8aTI32QyGWTiNE2",
+      "username": "Aventureiro",
+      "xp": 0
+    },
+    "V4EylT36V8ffKxplBWqU7fSa47W2": {
+      "coins": 0,
+      "coinsDaily": 0,
+      "coinsMonthly": 0,
+      "coinsWeekly": 0,
+      "created_at": 1774622779775,
+      "email": "mirellardasilva@gmail.com",
+      "iconUrl": "",
+      "level": 1,
+      "nickname": "Aventureiro",
+      "photoURL": "",
+      "role": "user",
+      "uid": "V4EylT36V8ffKxplBWqU7fSa47W2",
+      "username": "Aventureiro",
+      "xp": 0
+    },
+    "Z569uIbuNrXTN90iZChDwvkmyko1": {
+      "badges": [
+        "-Oo5cxSL3DSYceLWbhbb",
+        "-Oo5cyAJHYB_tT_tZNzZ",
+        "-Oo6N1L64FPZPV5lsZx5"
+      ],
+      "coins": 213,
+      "coinsDaily": 213,
+      "coinsMonthly": 213,
+      "coinsWeekly": 213,
+      "created_at": 1774302645354,
+      "email": "vini1704@gmail.com",
+      "iconUrl": "🦊",
+      "level": 4,
+      "nickname": "oVinni",
+      "photoURL": "",
+      "role": "user",
+      "uid": "Z569uIbuNrXTN90iZChDwvkmyko1",
+      "updated_at": 1774310154465,
+      "username": "oVinni",
+      "xp": 453
+    },
+    "lPNI95E9SseQnwP9Yeb6uYBxM713": {
+      "coins": 0,
+      "coinsDaily": 0,
+      "coinsMonthly": 0,
+      "coinsWeekly": 0,
+      "created_at": 1774311887694,
+      "email": "aishayt15@gmail.com",
+      "iconUrl": "",
+      "level": 1,
+      "nickname": "Luna",
+      "photoURL": "",
+      "role": "user",
+      "uid": "lPNI95E9SseQnwP9Yeb6uYBxM713",
+      "username": "Luna",
+      "xp": 0
+    },
+    "smVJWJNgptOGcSY4ocZzvCt7gMf2": {
+      "badges": [
+        "-Oo5cxSL3DSYceLWbhbb",
+        "-Oo5cyAJHYB_tT_tZNzZ",
+        "-Oo6N1L64FPZPV5lsZx5",
+        "-Oo5cxnXBvjQkieMPsXh",
+        "-Oo5cy5LxAWfIu7uIMNW"
+      ],
+      "coins": 473,
+      "coinsDaily": 473,
+      "coinsMonthly": 473,
+      "coinsWeekly": 473,
+      "created_at": 1774957489657,
+      "email": "joui.jouki1711@gmail.com",
+      "iconUrl": "🦊",
+      "level": 6,
+      "nickname": "Agatha",
+      "photoURL": "",
+      "role": "user",
+      "uid": "smVJWJNgptOGcSY4ocZzvCt7gMf2",
+      "updated_at": 1775753406139,
+      "username": "Aventureiro",
+      "xp": 1013
+    },
+    "ucmrzO8w1CUAAyN8Jun1kyvmZIv2": {
+      "badges": [
+        "-Oo5cxSL3DSYceLWbhbb",
+        "-Oo5cyAJHYB_tT_tZNzZ",
+        "-Oo6N1L64FPZPV5lsZx5"
+      ],
+      "coins": 113,
+      "coinsDaily": 113,
+      "coinsMonthly": 113,
+      "coinsWeekly": 113,
+      "created_at": 1774634175544,
+      "email": "zeronovenovenove@gmail.com",
+      "iconUrl": "🔮",
+      "level": 3,
+      "nickname": "marii0999",
+      "photoURL": "",
+      "role": "user",
+      "uid": "ucmrzO8w1CUAAyN8Jun1kyvmZIv2",
+      "updated_at": 1774724276096,
+      "username": "marii0999",
+      "xp": 353
+    }
+  }
+,
+  "maps": {},
+  "mapLikes": {},
+  "mapFavorites": {},
+  "mapExamples": {
+    "-MapEx001": {
+      "id": "-MapEx001",
+      "title": "Mapa Exemplo - Vila Inicial",
+      "description": "Mapa básico de uma vila para começar seus projetos",
+      "downloadUrl": "https://drive.google.com/file/d/exemplo",
+      "previewImage": "https://i.imgur.com/exemplo.png",
+      "created_at": 1775753500000
+    }
+  }
+}
