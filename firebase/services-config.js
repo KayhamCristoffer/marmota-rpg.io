@@ -47,5 +47,6 @@ export {
   limitToLast,
   onValue,
   off,
-  serverTimestamp
+  serverTimestamp,
+  increment
 } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-database.js";
