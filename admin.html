@@ -62,6 +62,10 @@
         <i class="fas fa-trophy"></i>
         <span>Rankings</span>
       </a>
+      <a href="#" class="nav-item" data-page="regions-admin">
+        <i class="fas fa-globe-americas"></i>
+        <span>Regiões</span>
+      </a>
       <div class="nav-divider"></div>
       <a href="#" id="dashboardLink" class="nav-item">
         <i class="fas fa-home"></i>
@@ -254,6 +258,18 @@
           </tbody>
         </table>
       </div>
+
+      <!-- Histórico de resets (apenas para períodos diário/semanal/mensal) -->
+      <div id="rankingHistorySection" style="display:none;margin-top:2rem">
+        <div class="page-header" style="margin-top:0">
+          <h3 class="page-title" id="rankingHistoryTitle" style="font-size:1.1rem">
+            <i class="fas fa-history"></i> Histórico de Resets
+          </h3>
+        </div>
+        <div id="rankingHistoryList">
+          <div class="loading-spinner"><i class="fas fa-spinner fa-spin"></i></div>
+        </div>
+      </div>
     </section>
 
     <!-- ══════════════════════════════════════════════════════
@@ -278,10 +294,37 @@
         <button class="filter-btn" data-map-admin-filter="rejected">
           <i class="fas fa-times"></i> Rejeitados
         </button>
+        <button class="filter-btn" data-map-admin-filter="all">
+          <i class="fas fa-list"></i> Todos
+        </button>
       </div>
 
       <!-- Lista de Mapas -->
       <div id="adminMapsList"></div>
+    </section>
+
+    <!-- ══════════════════════════════════════════════════════
+         PÁGINA: REGIÕES (GERENCIAR MAPAS APROVADOS)
+    ══════════════════════════════════════════════════════ -->
+    <section class="page" id="page-regions-admin">
+      <div class="page-header">
+        <h2 class="page-title"><i class="fas fa-globe-americas"></i> Gerenciar Regiões</h2>
+        <button class="btn-refresh" id="refreshRegionsAdminBtn" title="Atualizar">
+          <i class="fas fa-sync-alt"></i> Atualizar
+        </button>
+      </div>
+
+      <div class="achievement-info-card" style="margin-bottom:1.5rem">
+        <i class="fas fa-info-circle"></i>
+        <div>
+          <strong>Regiões são mapas aprovados</strong> — Para remover um mapa das regiões, rejeite-o
+          na página "Gerenciar Mapas". Aqui você pode visualizar e editar mapas já aprovados.
+        </div>
+      </div>
+
+      <div id="regionsAdminList">
+        <div class="loading-spinner"><i class="fas fa-spinner fa-spin"></i> Carregando regiões...</div>
+      </div>
     </section>
 
   </main>
@@ -462,6 +505,19 @@
 
   <!-- ─── TOAST ───────────────────────────────────────────────── -->
   <div class="toast-container" id="toastContainer"></div>
+
+  <!-- ─── MODAL: REVISAR MAPA ─────────────────────────────────── -->
+  <div class="modal-overlay" id="mapReviewModal" style="display:none">
+    <div class="modal modal-large" style="max-width:760px;max-height:90vh;overflow-y:auto">
+      <div class="modal-header">
+        <h3><i class="fas fa-search"></i> Revisar Mapa</h3>
+        <button class="modal-close" id="closeMapReviewModal"><i class="fas fa-times"></i></button>
+      </div>
+      <div class="modal-body" id="mapReviewContent">
+        <div class="loading-spinner"><i class="fas fa-spinner fa-spin"></i></div>
+      </div>
+    </div>
+  </div>
 
   <script type="module" src="js/auth.js"></script>
   <script type="module" src="js/admin.js"></script>
