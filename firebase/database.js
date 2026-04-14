@@ -29,7 +29,7 @@ import {
   ref, get, set, update, push, remove,
   query, orderByChild, equalTo,
   limitToLast, onValue, off,
-  serverTimestamp
+  serverTimestamp, increment
 } from "./services-config.js";
 
 /* ════════════════════════════════════════════════════════════════
@@ -766,6 +766,16 @@ export async function proc_checkAndAwardAchievements(uid, completedCount, userLe
 ════════════════════════════════════════════════════════════════ */
 
 export async function proc_updateRankingEntry(uid, total, daily, weekly, monthly) {
+  // Se os valores não forem fornecidos, ler do users/{uid}
+  if (total === undefined) {
+    const userSnap = await get(ref(db, `users/${uid}`));
+    if (!userSnap.exists()) return;
+    const u = userSnap.val();
+    total   = u.coins        || 0;
+    daily   = u.coinsDaily   || 0;
+    weekly  = u.coinsWeekly  || 0;
+    monthly = u.coinsMonthly || 0;
+  }
   await set(ref(db, `rankings/${uid}`), {
     uid, coinsTotal: total, coinsDaily: daily,
     coinsWeekly: weekly, coinsMonthly: monthly, updated_at: now()
@@ -844,13 +854,75 @@ export async function proc_resetRanking(period) {
   const field    = fieldMap[period];
   if (!field) throw new Error(`Período inválido: ${period}`);
 
-  const snap    = await get(ref(db, "rankings"));
-  const entries = snapToArray(snap);
-  const updates = {};
-  entries.forEach(e => { updates[`rankings/${e.id}/${field}`] = 0; });
-  if (Object.keys(updates).length) await update(ref(db, "/"), updates);
-  await set(ref(db, `meta/lastReset_${period}`), now());
+  const timestamp = now();
+
+  // 1) Ler dados atuais para salvar no histórico
+  const [rankSnap, usersSnap] = await Promise.all([
+    get(ref(db, "rankings")),
+    get(ref(db, "users"))
+  ]);
+
+  const rankEntries = snapToArray(rankSnap);
+  const usersMap    = {};
+  snapToArray(usersSnap).forEach(u => { usersMap[u.uid || u.id] = u; });
+
+  // Montar snapshot do ranking para histórico
+  const historyEntries = rankEntries
+    .filter(e => (e[field] || 0) > 0)
+    .sort((a, b) => (b[field] || 0) - (a[field] || 0))
+    .map((e, i) => {
+      const u = usersMap[e.uid || e.id] || {};
+      return {
+        position:  i + 1,
+        uid:       e.uid || e.id,
+        nickname:  u.nickname || u.username || "Aventureiro",
+        username:  u.username || "",
+        level:     u.level || 1,
+        coins:     e[field] || 0
+      };
+    });
+
+  // 2) Salvar histórico em rankingHistory/{period}/{timestamp}
+  const histRef = ref(db, `rankingHistory/${period}/${timestamp}`);
+  await set(histRef, {
+    period,
+    resetAt:  timestamp,
+    resetBy:  "admin",
+    entries:  historyEntries
+  });
+
+  // 3) Zerar campo em rankings/{uid}
+  const rankUpdates = {};
+  rankEntries.forEach(e => {
+    const id = e.uid || e.id;
+    rankUpdates[`rankings/${id}/${field}`] = 0;
+  });
+
+  // 4) Zerar campo espelhado em users/{uid}
+  snapToArray(usersSnap).forEach(u => {
+    const id = u.uid || u.id;
+    if (id) rankUpdates[`users/${id}/${field}`] = 0;
+  });
+
+  if (Object.keys(rankUpdates).length) await update(ref(db, "/"), rankUpdates);
+  await set(ref(db, `meta/lastReset_${period}`), timestamp);
+
+  return { period, resetAt: timestamp, count: historyEntries.length };
 }
+
+/**
+ * Listar histórico de um período (ADMIN)
+ */
+export async function proc_getRankingHistory(period, limitN = 10) {
+  const snap = await get(ref(db, `rankingHistory/${period}`));
+  if (!snap.exists()) return [];
+
+  const items = snapToArray(snap);
+  items.sort((a, b) => (b.resetAt || 0) - (a.resetAt || 0));
+  return limitN > 0 ? items.slice(0, limitN) : items;
+}
+
+export const getRankingHistory = proc_getRankingHistory;
 
 /* ════════════════════════════════════════════════════════════════
    §8  STATS
@@ -1124,6 +1196,21 @@ export function listenPendingMaps(callback) {
   return () => off(mapsRef, "value", handler);
 }
 
+/**
+ * Escuta histórico de ranking de um período em tempo real (admin).
+ * callback(history: array) — ordenado por resetAt desc.
+ */
+export function listenRankingHistory(period, callback) {
+  const histRef = ref(db, `rankingHistory/${period}`);
+  const handler = (snap) => {
+    const arr = snapToArray(snap);
+    arr.sort((a, b) => (b.resetAt || 0) - (a.resetAt || 0));
+    callback(arr);
+  };
+  onValue(histRef, handler);
+  return () => off(histRef, "value", handler);
+}
+
 /* ════════════════════════════════════════════════════════════════
    §10  LEGACY EXPORTS
 ════════════════════════════════════════════════════════════════ */
@@ -1276,8 +1363,9 @@ async function proc_approveMap(mapId, adminUid, rewards = {}) {
   if (!mapSnap.exists()) throw new Error("Mapa não encontrado");
   
   const map = mapSnap.val();
-  const coinsReward = rewards.coins || 50;  // Padrão: 50 moedas
-  const tokensReward = rewards.tokens || 10; // Padrão: 10 tokens
+  // Aceitar coins/tokens OU coinsReward/tokensReward
+  const coinsReward  = rewards.coins  ?? rewards.coinsReward  ?? 50;
+  const tokensReward = rewards.tokens ?? rewards.tokensReward ?? 10;
 
   // Atualizar mapa
   await update(ref(db, `maps/${mapId}`), {
@@ -1292,21 +1380,36 @@ async function proc_approveMap(mapId, adminUid, rewards = {}) {
   // Dar recompensa ao autor (se ainda não recebeu)
   if (!map.rewardClaimed) {
     const author = await proc_getUser(map.authorUid);
-    const newCoins = (author.coins || 0) + coinsReward;
-    const newTokens = (author.tokens || 0) + tokensReward;
+    if (!author) throw new Error("Autor não encontrado");
+
+    const newCoins        = (author.coins        || 0) + coinsReward;
+    const newTokens       = (author.tokens       || 0) + tokensReward;
+    const newCoinsDaily   = (author.coinsDaily   || 0) + coinsReward;
+    const newCoinsWeekly  = (author.coinsWeekly  || 0) + coinsReward;
+    const newCoinsMonthly = (author.coinsMonthly || 0) + coinsReward;
+    const newMapsApproved = (author.mapsApproved || 0) + 1;
 
     await update(ref(db, `users/${map.authorUid}`), {
-      coins: newCoins,
-      tokens: newTokens,
-      mapsApproved: (author.mapsApproved || 0) + 1
+      coins:        newCoins,
+      tokens:       newTokens,
+      coinsDaily:   newCoinsDaily,
+      coinsWeekly:  newCoinsWeekly,
+      coinsMonthly: newCoinsMonthly,
+      mapsApproved: newMapsApproved
     });
 
     await update(ref(db, `maps/${mapId}`), {
       rewardClaimed: true
     });
 
-    // Atualizar ranking
-    await proc_updateRankingEntry(map.authorUid);
+    // Atualizar ranking com todos os campos corretos
+    await proc_updateRankingEntry(
+      map.authorUid,
+      newCoins,
+      newCoinsDaily,
+      newCoinsWeekly,
+      newCoinsMonthly
+    );
   }
 
   return { success: true, coinsReward, tokensReward };
