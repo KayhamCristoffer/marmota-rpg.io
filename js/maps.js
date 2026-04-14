@@ -1,5 +1,11 @@
 /* ================================================================
-   js/maps.js - Sistema de Mapas
+   js/maps.js - Sistema de Mapas  v2.0
+   Fixes:
+   - Screenshots como links clicáveis + proxy para imagens externas
+   - handleLikeMap captura erros corretamente e usa referência local
+   - openMapDetailsModal com UX melhorada
+   - Todas as imagens externas (Google Drive, prnt.sc etc.) exibidas
+     como botões de link (não como <img> que pode falhar CORS)
 ================================================================ */
 
 import "../firebase/session-manager.js";
@@ -11,9 +17,58 @@ import { get, ref } from "../firebase/services-config.js";
 import { db } from "../firebase/services-config.js";
 
 let _currentMapFilter = "all";
-let _currentMapSort = "likes";
-let _allMaps = [];
-let _editingMapId = null;
+let _currentMapSort   = "likes";
+let _allMaps          = [];
+let _editingMapId     = null;
+
+/* ── Helper: converter link do Google Drive para visualização direta ── */
+function drivePreviewUrl(url) {
+  if (!url) return null;
+  // https://drive.google.com/file/d/FILE_ID/view  →  embed/preview
+  const m = url.match(/\/d\/([a-zA-Z0-9_-]+)/);
+  if (m) return `https://drive.google.com/thumbnail?id=${m[1]}&sz=w400`;
+  // https://drive.google.com/open?id=FILE_ID
+  const m2 = url.match(/[?&]id=([a-zA-Z0-9_-]+)/);
+  if (m2) return `https://drive.google.com/thumbnail?id=${m2[1]}&sz=w400`;
+  return null;
+}
+
+/* ── Helper: retornar src seguro para screenshot ── */
+function safeImgSrc(url) {
+  if (!url) return null;
+  if (url.startsWith("https://i.imgur.com") ||
+      url.startsWith("https://imgur.com/") ||
+      url.startsWith("https://ibb.co/") ||
+      url.startsWith("https://i.ibb.co/")) {
+    return url;
+  }
+  const drive = drivePreviewUrl(url);
+  if (drive) return drive;
+  // prnt.sc e outros — não renderizáveis diretamente; retornar null para exibir como link
+  return null;
+}
+
+/* ── Helper: renderizar screenshot como imagem ou link ── */
+function renderScreenshot(url, index = 0) {
+  if (!url) return "";
+  const src = safeImgSrc(url);
+  if (src) {
+    return `
+      <a href="${url}" target="_blank" rel="noopener" title="Abrir imagem original">
+        <img src="${src}" class="screenshot-img"
+             alt="Screenshot ${index + 1}"
+             onerror="this.parentElement.innerHTML=renderScreenshotLink('${escapeHtml(url)}', ${index})">
+      </a>`;
+  }
+  return renderScreenshotLink(url, index);
+}
+
+function renderScreenshotLink(url, index = 0) {
+  return `
+    <a href="${url}" target="_blank" rel="noopener" class="screenshot-link-btn">
+      <i class="fas fa-image"></i> Ver Print ${index + 1}
+    </a>`;
+}
 
 /* ════════════════════════════════════════════════════════════════
    CARREGAR MEUS MAPAS
@@ -31,7 +86,6 @@ window.loadMyMaps = async function(filter = "all") {
 
     const maps = await getMyMaps(uid);
 
-    // Filtrar
     let filtered = maps;
     if (filter !== "all") {
       filtered = maps.filter(m => m.status === filter);
@@ -49,7 +103,6 @@ window.loadMyMaps = async function(filter = "all") {
 
     container.innerHTML = filtered.map(renderMyMapCard).join('');
 
-    // Event listeners
     container.querySelectorAll('.btn-edit-map').forEach(btn => {
       btn.addEventListener('click', () => openEditMapModal(btn.dataset.id));
     });
@@ -62,18 +115,21 @@ window.loadMyMaps = async function(filter = "all") {
 
 function renderMyMapCard(map) {
   const statusConfig = {
-    pending: { label: "Pendente", css: "status-pending", icon: "⏳" },
-    approved: { label: "Aprovado", css: "status-approved", icon: "✅" },
+    pending:  { label: "Pendente",  css: "status-pending",  icon: "⏳" },
+    approved: { label: "Aprovado",  css: "status-approved", icon: "✅" },
     rejected: { label: "Rejeitado", css: "status-rejected", icon: "❌" }
   };
   const status = statusConfig[map.status] || statusConfig.pending;
+  const screenshots = Array.isArray(map.screenshots) ? map.screenshots : [];
+  const previewSrc  = screenshots.length ? safeImgSrc(screenshots[0]) : null;
 
   return `
     <div class="map-card">
       <div class="map-preview">
-        <img src="${map.screenshots[0] || 'https://via.placeholder.com/300x200?text=Sem+Preview'}" 
-             alt="${escapeHtml(map.title)}"
-             onerror="this.src='https://via.placeholder.com/300x200?text=Erro+na+Imagem'">
+        ${previewSrc
+          ? `<img src="${previewSrc}" alt="${escapeHtml(map.title)}"
+                  onerror="this.style.display='none'">`
+          : `<div class="map-preview-placeholder"><i class="fas fa-map"></i></div>`}
         <div class="map-status-badge ${status.css}">
           ${status.icon} ${status.label}
         </div>
@@ -81,7 +137,7 @@ function renderMyMapCard(map) {
 
       <div class="map-info">
         <h3 class="map-title">${escapeHtml(map.title)}</h3>
-        <p class="map-description">${escapeHtml(map.description).substring(0, 100)}...</p>
+        <p class="map-description">${escapeHtml(map.description || "").substring(0, 100)}...</p>
 
         <div class="map-stats">
           <span title="Curtidas"><i class="fas fa-heart"></i> ${map.likes || 0}</span>
@@ -92,10 +148,10 @@ function renderMyMapCard(map) {
         ${map.status === 'approved' ? `
           <div class="map-rewards">
             <span class="reward-badge">
-              <i class="fas fa-coins"></i> +${map.coinsReward} moedas
+              <i class="fas fa-coins"></i> +${map.coinsReward || 0} moedas
             </span>
             <span class="reward-badge">
-              <i class="fas fa-gem"></i> +${map.tokensReward} tokens
+              <i class="fas fa-gem"></i> +${map.tokensReward || 0} tokens
             </span>
           </div>
         ` : ''}
@@ -136,9 +192,8 @@ window.loadRegions = async function(sort = "likes") {
     let maps = await getApprovedMaps();
     _allMaps = maps;
 
-    // Ordenar
     if (sort === "recent") {
-      maps.sort((a, b) => b.created_at - a.created_at);
+      maps.sort((a, b) => (b.created_at || 0) - (a.created_at || 0));
     } else if (sort === "downloads") {
       maps.sort((a, b) => (b.downloads || 0) - (a.downloads || 0));
     } else {
@@ -165,43 +220,44 @@ window.loadRegions = async function(sort = "likes") {
 
 function renderRegionsMaps(maps) {
   const container = document.getElementById("regionsMapsList");
-  
-  container.innerHTML = maps.map((map, index) => `
-    <div class="region-map-card" data-map-id="${map.id}">
-      <div class="region-rank">#${index + 1}</div>
-      
-      <div class="region-preview">
-        <img src="${map.screenshots[0] || 'https://via.placeholder.com/300x200'}" 
-             alt="${escapeHtml(map.title)}">
-      </div>
+  if (!container) return;
 
-      <div class="region-info">
-        <h3 class="region-title">${escapeHtml(map.title)}</h3>
-        <p class="region-author">Por ${escapeHtml(map.authorName)}</p>
+  container.innerHTML = maps.map((map, index) => {
+    const screenshots = Array.isArray(map.screenshots) ? map.screenshots : [];
+    const previewSrc  = screenshots.length ? safeImgSrc(screenshots[0]) : null;
 
-        <div class="region-stats">
-          <span class="stat-item">
-            <i class="fas fa-heart"></i> ${map.likes || 0}
-          </span>
-          <span class="stat-item">
-            <i class="fas fa-download"></i> ${map.downloads || 0}
-          </span>
-          <span class="stat-item">
-            <i class="fas fa-eye"></i> ${map.views || 0}
-          </span>
+    return `
+      <div class="region-map-card" data-map-id="${map.id}">
+        <div class="region-rank">#${index + 1}</div>
+
+        <div class="region-preview">
+          ${previewSrc
+            ? `<img src="${previewSrc}" alt="${escapeHtml(map.title)}"
+                    onerror="this.style.display='none'">`
+            : `<div class="map-preview-placeholder"><i class="fas fa-map"></i></div>`}
         </div>
 
-        <div class="region-actions">
-          <button class="btn-like" data-map-id="${map.id}">
-            <i class="fas fa-heart"></i> Curtir
-          </button>
-          <button class="btn-view-map" data-map-id="${map.id}">
-            <i class="fas fa-eye"></i> Ver Detalhes
-          </button>
+        <div class="region-info">
+          <h3 class="region-title">${escapeHtml(map.title)}</h3>
+          <p class="region-author">Por ${escapeHtml(map.authorName)}</p>
+
+          <div class="region-stats">
+            <span class="stat-item"><i class="fas fa-heart"></i> ${map.likes || 0}</span>
+            <span class="stat-item"><i class="fas fa-download"></i> ${map.downloads || 0}</span>
+            <span class="stat-item"><i class="fas fa-eye"></i> ${map.views || 0}</span>
+          </div>
+
+          <div class="region-actions">
+            <button class="btn-like" data-map-id="${map.id}">
+              <i class="fas fa-heart"></i> Curtir
+            </button>
+            <button class="btn-view-map" data-map-id="${map.id}">
+              <i class="fas fa-eye"></i> Ver Detalhes
+            </button>
+          </div>
         </div>
-      </div>
-    </div>
-  `).join('');
+      </div>`;
+  }).join('');
 
   // Event listeners
   container.querySelectorAll('.btn-like').forEach(btn => {
@@ -224,7 +280,10 @@ function renderRegionsMaps(maps) {
 async function handleLikeMap(mapId) {
   try {
     const uid = window.RPG?.getFbUser()?.uid;
-    if (!uid) return;
+    if (!uid) {
+      window.showToast?.("Faça login para curtir mapas", "warning");
+      return;
+    }
 
     const result = await likeMap(mapId, uid);
     window.showToast?.(
@@ -232,41 +291,53 @@ async function handleLikeMap(mapId) {
       result.liked ? "success" : "info"
     );
 
-    // Recarregar
-    await window.loadRegions?.(_currentMapSort);
+    // Recarregar lista atual
+    await window.loadRegions(_currentMapSort);
   } catch (err) {
-    window.showToast?.("Erro ao curtir mapa", "error");
+    console.error("Erro ao curtir mapa:", err);
+    window.showToast?.("Erro ao curtir mapa: " + (err.message || ""), "error");
   }
 }
 
 async function openMapDetailsModal(mapId) {
-  const modal = document.getElementById("mapDetailsModal");
+  const modal   = document.getElementById("mapDetailsModal");
   const content = document.getElementById("mapDetailsContent");
-  
+
   if (!modal || !content) return;
 
-  content.innerHTML = '<div class="loading"><i class="fas fa-spinner fa-spin"></i></div>';
+  content.innerHTML = '<div class="loading"><i class="fas fa-spinner fa-spin"></i> Carregando detalhes...</div>';
   modal.style.display = "flex";
 
   try {
     const uid = window.RPG?.getFbUser()?.uid;
     const map = await getMapDetails(mapId, uid);
 
+    if (!map) throw new Error("Mapa não encontrado");
+
+    const screenshots = Array.isArray(map.screenshots) ? map.screenshots : [];
+
+    const screenshotsHtml = screenshots.length > 0
+      ? `<div class="map-screenshots-grid">
+           ${screenshots.map((url, i) => renderScreenshot(url, i)).join('')}
+         </div>`
+      : `<p style="color:var(--text-muted)">Nenhum screenshot disponível</p>`;
+
     content.innerHTML = `
       <div class="map-details-header">
         <h2>${escapeHtml(map.title)}</h2>
-        <p class="map-author">Por ${escapeHtml(map.authorName)}</p>
+        <p class="map-author">
+          <i class="fas fa-user"></i> Por ${escapeHtml(map.authorName)}
+        </p>
       </div>
 
-      <div class="map-screenshots">
-        ${map.screenshots.map(url => `
-          <img src="${url}" alt="Screenshot" class="screenshot-img">
-        `).join('')}
+      <div class="map-screenshots-section">
+        <h3><i class="fas fa-images"></i> Screenshots</h3>
+        ${screenshotsHtml}
       </div>
 
       <div class="map-description-full">
         <h3><i class="fas fa-info-circle"></i> Descrição</h3>
-        <p>${escapeHtml(map.description).replace(/\n/g, '<br>')}</p>
+        <p>${escapeHtml(map.description || "").replace(/\n/g, '<br>')}</p>
       </div>
 
       ${map.topics && map.topics.length > 0 ? `
@@ -280,26 +351,28 @@ async function openMapDetailsModal(mapId) {
 
       <div class="map-stats-full">
         <div class="stat-box">
-          <i class="fas fa-heart"></i>
+          <i class="fas fa-heart" style="color:#e74c3c"></i>
           <strong>${map.likes || 0}</strong>
           <span>Curtidas</span>
         </div>
         <div class="stat-box">
-          <i class="fas fa-download"></i>
+          <i class="fas fa-download" style="color:var(--gold)"></i>
           <strong>${map.downloads || 0}</strong>
           <span>Downloads</span>
         </div>
         <div class="stat-box">
-          <i class="fas fa-eye"></i>
+          <i class="fas fa-eye" style="color:#3498db"></i>
           <strong>${map.views || 0}</strong>
           <span>Views</span>
         </div>
       </div>
 
       <div class="map-actions-full">
-        <button class="btn-primary btn-download-map" data-link="${map.driveLink}" data-id="${map.id}">
-          <i class="fas fa-download"></i> Baixar Mapa
-        </button>
+        <a href="${map.driveLink}" target="_blank" rel="noopener"
+           class="btn-primary map-drive-btn"
+           data-id="${map.id}">
+          <i class="fas fa-external-link-alt"></i> Abrir no Drive
+        </a>
         <button class="btn-secondary btn-like-modal ${map.userLiked ? 'liked' : ''}" data-id="${map.id}">
           <i class="fas fa-heart"></i> ${map.userLiked ? 'Curtido' : 'Curtir'}
         </button>
@@ -309,32 +382,43 @@ async function openMapDetailsModal(mapId) {
       </div>
     `;
 
-    // Event listeners
-    content.querySelector('.btn-download-map')?.addEventListener('click', async (e) => {
-      await incrementMapDownload(map.id);
-      window.open(e.currentTarget.dataset.link, '_blank');
-      window.showToast?.("Download iniciado! 📥", "success");
+    // Download btn — increment counter and open drive link
+    content.querySelector('.map-drive-btn')?.addEventListener('click', async (e) => {
+      try {
+        await incrementMapDownload(map.id);
+      } catch (_) {}
     });
 
     content.querySelector('.btn-like-modal')?.addEventListener('click', async () => {
       await handleLikeMap(map.id);
-      openMapDetailsModal(map.id); // Recarregar
+      openMapDetailsModal(map.id);
     });
 
     content.querySelector('.btn-favorite-modal')?.addEventListener('click', async () => {
       await handleFavoriteMap(map.id);
-      openMapDetailsModal(map.id); // Recarregar
+      openMapDetailsModal(map.id);
     });
 
   } catch (err) {
-    content.innerHTML = '<div class="empty-state"><p>Erro ao carregar detalhes.</p></div>';
+    console.error("Erro ao abrir detalhes:", err);
+    content.innerHTML = `
+      <div class="empty-state">
+        <i class="fas fa-exclamation-triangle"></i>
+        <p>Erro ao carregar detalhes: ${escapeHtml(err.message || "")}</p>
+        <button class="btn-secondary" onclick="document.getElementById('mapDetailsModal').style.display='none'">
+          Fechar
+        </button>
+      </div>`;
   }
 }
 
 async function handleFavoriteMap(mapId) {
   try {
     const uid = window.RPG?.getFbUser()?.uid;
-    if (!uid) return;
+    if (!uid) {
+      window.showToast?.("Faça login para favoritar mapas", "warning");
+      return;
+    }
 
     const result = await favoriteMap(mapId, uid);
     window.showToast?.(
@@ -342,6 +426,7 @@ async function handleFavoriteMap(mapId) {
       result.favorited ? "success" : "info"
     );
   } catch (err) {
+    console.error("Erro ao favoritar mapa:", err);
     window.showToast?.("Erro ao favoritar mapa", "error");
   }
 }
@@ -355,13 +440,12 @@ function openSubmitMapModal() {
 
   _editingMapId = null;
   document.getElementById("submitMapTitle").textContent = "Enviar Novo Mapa";
-  
-  // Limpar campos
-  document.getElementById("mapTitle").value = "";
+
+  document.getElementById("mapTitle").value       = "";
   document.getElementById("mapDescription").value = "";
-  document.getElementById("mapTopics").value = "";
-  document.getElementById("mapDriveLink").value = "";
-  document.getElementById("mapScreenshots").value = "";
+  document.getElementById("mapTopics").value       = "";
+  document.getElementById("mapDriveLink").value    = "";
+  document.getElementById("mapScreenshots").value  = "";
 
   modal.style.display = "flex";
 }
@@ -374,18 +458,15 @@ async function openEditMapModal(mapId) {
   document.getElementById("submitMapTitle").textContent = "Editar Mapa";
 
   try {
-    // Buscar mapa diretamente sem incrementar views
     const mapSnap = await get(ref(db, `maps/${mapId}`));
-    if (!mapSnap.exists()) {
-      throw new Error("Mapa não encontrado");
-    }
+    if (!mapSnap.exists()) throw new Error("Mapa não encontrado");
     const map = mapSnap.val();
 
-    document.getElementById("mapTitle").value = map.title || "";
+    document.getElementById("mapTitle").value       = map.title || "";
     document.getElementById("mapDescription").value = map.description || "";
-    document.getElementById("mapTopics").value = (map.topics || []).join(', ');
-    document.getElementById("mapDriveLink").value = map.driveLink || "";
-    document.getElementById("mapScreenshots").value = (map.screenshots || []).join('\n');
+    document.getElementById("mapTopics").value       = (map.topics || []).join(', ');
+    document.getElementById("mapDriveLink").value    = map.driveLink || "";
+    document.getElementById("mapScreenshots").value  = (map.screenshots || []).join('\n');
 
     modal.style.display = "flex";
   } catch (err) {
@@ -424,8 +505,8 @@ window.loadMapExamples = async function() {
    EVENT LISTENERS
 ════════════════════════════════════════════════════════════════ */
 document.addEventListener("DOMContentLoaded", () => {
-  // Botões de abrir modals
   document.getElementById("openSubmitMapBtn")?.addEventListener("click", openSubmitMapModal);
+
   document.getElementById("closeSubmitMapModal")?.addEventListener("click", () => {
     document.getElementById("submitMapModal").style.display = "none";
   });
@@ -436,16 +517,19 @@ document.addEventListener("DOMContentLoaded", () => {
   document.getElementById("closeMapDetailsModal")?.addEventListener("click", () => {
     document.getElementById("mapDetailsModal").style.display = "none";
   });
+  document.getElementById("mapDetailsModal")?.addEventListener("click", e => {
+    if (e.target.id === "mapDetailsModal")
+      e.target.style.display = "none";
+  });
 
-  // Enviar mapa
+  // Enviar / Editar mapa
   document.getElementById("confirmSubmitMapBtn")?.addEventListener("click", async () => {
-    const title = document.getElementById("mapTitle").value.trim();
-    const description = document.getElementById("mapDescription").value.trim();
-    const topicsStr = document.getElementById("mapTopics").value.trim();
-    const driveLink = document.getElementById("mapDriveLink").value.trim();
+    const title        = document.getElementById("mapTitle").value.trim();
+    const description  = document.getElementById("mapDescription").value.trim();
+    const topicsStr    = document.getElementById("mapTopics").value.trim();
+    const driveLink    = document.getElementById("mapDriveLink").value.trim();
     const screenshotsStr = document.getElementById("mapScreenshots").value.trim();
 
-    // Validações
     if (!title || title.length < 3) {
       window.showToast?.("Título deve ter pelo menos 3 caracteres", "warning");
       return;
@@ -459,22 +543,22 @@ document.addEventListener("DOMContentLoaded", () => {
       return;
     }
     if (!screenshotsStr) {
-      window.showToast?.("Adicione pelo menos 1 print de preview", "warning");
+      window.showToast?.("Adicione pelo menos 1 link de screenshot", "warning");
       return;
     }
 
-    const topics = topicsStr ? topicsStr.split(',').map(t => t.trim()).filter(Boolean) : [];
+    const topics      = topicsStr ? topicsStr.split(',').map(t => t.trim()).filter(Boolean) : [];
     const screenshots = screenshotsStr.split('\n').map(s => s.trim()).filter(Boolean);
+
+    const btn = document.getElementById("confirmSubmitMapBtn");
+    const origHtml = btn?.innerHTML;
+    if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Enviando...'; }
 
     try {
       const uid = window.RPG?.getFbUser()?.uid;
-      const mapData = {
-        title,
-        description,
-        topics,
-        driveLink,
-        screenshots
-      };
+      if (!uid) throw new Error("Usuário não autenticado");
+
+      const mapData = { title, description, topics, driveLink, screenshots };
 
       if (_editingMapId) {
         await editMap(uid, _editingMapId, mapData);
@@ -488,7 +572,10 @@ document.addEventListener("DOMContentLoaded", () => {
       await window.loadMyMaps?.(_currentMapFilter);
 
     } catch (err) {
+      console.error("Erro ao enviar mapa:", err);
       window.showToast?.(err.message || "Erro ao enviar mapa", "error");
+    } finally {
+      if (btn) { btn.disabled = false; btn.innerHTML = origHtml; }
     }
   });
 
@@ -512,30 +599,18 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // Busca em Regiões
   document.getElementById("regionsSearchInput")?.addEventListener("input", (e) => {
-    const query = e.target.value.toLowerCase().trim();
-    
-    if (!query) {
-      renderRegionsMaps(_allMaps);
-      return;
-    }
-
+    const q = e.target.value.toLowerCase().trim();
+    if (!q) { renderRegionsMaps(_allMaps); return; }
     const filtered = _allMaps.filter(m =>
-      m.title.toLowerCase().includes(query) ||
-      m.authorName.toLowerCase().includes(query) ||
-      (m.description && m.description.toLowerCase().includes(query))
+      (m.title || "").toLowerCase().includes(q) ||
+      (m.authorName || "").toLowerCase().includes(q) ||
+      (m.description || "").toLowerCase().includes(q)
     );
-
     renderRegionsMaps(filtered);
   });
 
-  // Refresh
-  document.getElementById("refreshMapsBtn")?.addEventListener("click", () => {
-    window.loadMyMaps?.(_currentMapFilter);
-  });
-
-  document.getElementById("refreshRegionsBtn")?.addEventListener("click", () => {
-    window.loadRegions?.(_currentMapSort);
-  });
+  document.getElementById("refreshMapsBtn")?.addEventListener("click",    () => window.loadMyMaps?.(_currentMapFilter));
+  document.getElementById("refreshRegionsBtn")?.addEventListener("click", () => window.loadRegions?.(_currentMapSort));
 });
 
 function escapeHtml(text) {

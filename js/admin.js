@@ -14,12 +14,14 @@ import {
   updateUserRole,
   createQuest, updateQuest, toggleQuest, deleteQuest,
   approveSubmission, rejectSubmission,
-  resetRanking, listenRanking,
+  resetRanking, listenRanking, listenRankingHistory, getRankingHistory,
   createAchievement, updateAchievement, deleteAchievement,
   seedDefaultAchievements,
   listenSubmissions, listenQuests as _listenQuests,
   listenUsers, listenAchievements,
-  getPendingMaps, getAllMaps, approveMap, rejectMap
+  getPendingMaps, getAllMaps, approveMap, rejectMap,
+  listenAllMaps, listenPendingMaps,
+  getMapDetails
 } from "../firebase/database.js";
 
 /* ─── Listeners ativos (para cleanup) ───────────────────────── */
@@ -51,12 +53,13 @@ document.addEventListener("DOMContentLoaded", async () => {
   /* Roteador de páginas */
   window.loadPage = async (page) => {
     switch (page) {
-      case "submissions":   loadSubmissions();  break;
-      case "quests":        loadAdminQuests();  break;
-      case "users":         loadUsers();        break;
-      case "maps":          loadAdminMaps("pending"); break;
-      case "ranking-admin": setupRankingAdmin(); loadRankingAdmin(); break;
-      case "achievements":  loadAchievements(); break;
+      case "submissions":    loadSubmissions();  break;
+      case "quests":         loadAdminQuests();  break;
+      case "users":          loadUsers();        break;
+      case "maps":           window.loadAdminMaps("pending"); break;
+      case "ranking-admin":  setupRankingAdmin(); loadRankingAdmin(); break;
+      case "achievements":   loadAchievements(); break;
+      case "regions-admin":  loadRegionsAdmin(); break;
     }
   };
 
@@ -718,10 +721,11 @@ window.doToggleRole = async (uid, currentRole) => {
 };
 
 /* ════════════════════════════════════════════════════════════════
-   RANKING ADMIN  –  exibe rankings + botões de reset
+   RANKING ADMIN  –  exibe rankings + botões de reset + histórico
 ════════════════════════════════════════════════════════════════ */
 let _currentRankingPeriod = "total";
 let _unsubRanking         = null;
+let _unsubRankingHist     = null;
 
 function _getNextResetLabel(type) {
   const now  = new Date();
@@ -758,14 +762,22 @@ function setupRankingAdmin() {
     btn._bound = true;
     btn.addEventListener("click", async () => {
       const period = btn.dataset.period;
-      if (!confirm(`Resetar ranking ${period}? Esta ação não pode ser desfeita!`)) return;
+      if (!confirm(`Resetar ranking ${period}?\n\nO histórico atual será salvo antes do reset.\nEsta ação zerará as moedas ${period === 'daily' ? 'diárias' : period === 'weekly' ? 'semanais' : 'mensais'} de todos os jogadores.`)) return;
       const orig = btn.innerHTML;
       btn.disabled = true;
       btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
       try {
-        await resetRanking(period);
-        window.showToast?.(`✅ Ranking ${period} resetado!`, "success");
-        loadRankingAdmin(_currentRankingPeriod);
+        const result = await resetRanking(period);
+        window.showToast?.(
+          `✅ Ranking ${period} resetado! ${result.count} jogadores arquivados.`,
+          "success"
+        );
+        // Recarregar ranking e histórico
+        if (_currentRankingPeriod === period || _currentRankingPeriod === "total") {
+          loadRankingAdmin(_currentRankingPeriod);
+        }
+        // Atualizar histórico se estiver visível
+        loadRankingHistory(period);
       } catch (err) {
         window.showToast?.(err.message || "Erro ao resetar", "error");
       } finally {
@@ -783,6 +795,12 @@ function setupRankingAdmin() {
       tab.classList.add("active");
       _currentRankingPeriod = tab.dataset.period;
       loadRankingAdmin(_currentRankingPeriod);
+      // Carregar histórico para daily/weekly/monthly
+      if (_currentRankingPeriod !== "total") {
+        loadRankingHistory(_currentRankingPeriod);
+      } else {
+        _set("rankingHistorySection", el => el.style.display = "none");
+      }
     });
   });
 
@@ -790,8 +808,76 @@ function setupRankingAdmin() {
   const refreshBtn = document.getElementById("refreshRankingBtn");
   if (refreshBtn && !refreshBtn._rankBound) {
     refreshBtn._rankBound = true;
-    refreshBtn.addEventListener("click", () => loadRankingAdmin(_currentRankingPeriod));
+    refreshBtn.addEventListener("click", () => {
+      loadRankingAdmin(_currentRankingPeriod);
+      if (_currentRankingPeriod !== "total") loadRankingHistory(_currentRankingPeriod);
+    });
   }
+}
+
+function loadRankingHistory(period) {
+  const section = document.getElementById("rankingHistorySection");
+  if (!section) return;
+
+  if (period === "total") { section.style.display = "none"; return; }
+  section.style.display = "block";
+
+  const container = document.getElementById("rankingHistoryList");
+  const title     = document.getElementById("rankingHistoryTitle");
+  if (title) title.textContent = `Histórico de Resets – ${period === 'daily' ? 'Diário' : period === 'weekly' ? 'Semanal' : 'Mensal'}`;
+  if (container) container.innerHTML = '<div class="loading-spinner"><i class="fas fa-spinner fa-spin"></i> Carregando histórico...</div>';
+
+  if (_unsubRankingHist) { _unsubRankingHist(); _unsubRankingHist = null; }
+
+  _unsubRankingHist = listenRankingHistory(period, (history) => {
+    if (!container) return;
+    if (!history || history.length === 0) {
+      container.innerHTML = '<p style="color:var(--text-muted);padding:1rem;text-align:center">Nenhum histórico de reset ainda.</p>';
+      return;
+    }
+
+    container.innerHTML = history.map(snapshot => {
+      const date = new Date(snapshot.resetAt || 0).toLocaleString("pt-BR");
+      const entries = Array.isArray(snapshot.entries) ? snapshot.entries : [];
+      const top3 = entries.slice(0, 3);
+
+      return `
+        <div class="ranking-history-card">
+          <div class="rh-header">
+            <div class="rh-date">
+              <i class="fas fa-clock"></i>
+              Resetado em ${date}
+            </div>
+            <span class="rh-count">${entries.length} jogador(es)</span>
+          </div>
+          ${top3.length > 0 ? `
+            <div class="rh-podium">
+              ${top3.map((e, i) => `
+                <div class="rh-entry">
+                  <span class="rh-pos">${i === 0 ? "🥇" : i === 1 ? "🥈" : "🥉"}</span>
+                  <span class="rh-name">${escapeHtml(e.nickname || "Aventureiro")}</span>
+                  <span class="rh-coins"><i class="fas fa-coins"></i> ${(e.coins || 0).toLocaleString("pt-BR")}</span>
+                </div>
+              `).join('')}
+            </div>
+          ` : ''}
+          ${entries.length > 3 ? `
+            <details class="rh-more">
+              <summary>Ver todos (${entries.length})</summary>
+              <div class="rh-all-entries">
+                ${entries.slice(3).map((e, i) => `
+                  <div class="rh-entry">
+                    <span class="rh-pos">#${i + 4}</span>
+                    <span class="rh-name">${escapeHtml(e.nickname || "Aventureiro")}</span>
+                    <span class="rh-coins"><i class="fas fa-coins"></i> ${(e.coins || 0).toLocaleString("pt-BR")}</span>
+                  </div>
+                `).join('')}
+              </div>
+            </details>
+          ` : ''}
+        </div>`;
+    }).join('');
+  });
 }
 
 function loadRankingAdmin(period = "total") {
@@ -866,147 +952,440 @@ function escapeHtml(text) {
    GERENCIAR MAPAS
 ════════════════════════════════════════════════════════════════ */
 let _currentMapAdminFilter = "pending";
+let _unsubAdminMaps        = null;
+
+/* Helper: converter link Google Drive para thumbnail */
+function _driveThumb(url) {
+  if (!url) return null;
+  const m = url.match(/\/d\/([a-zA-Z0-9_-]+)/);
+  if (m) return `https://drive.google.com/thumbnail?id=${m[1]}&sz=w400`;
+  const m2 = url.match(/[?&]id=([a-zA-Z0-9_-]+)/);
+  if (m2) return `https://drive.google.com/thumbnail?id=${m2[1]}&sz=w400`;
+  return null;
+}
+
+function _safeScreenshotSrc(url) {
+  if (!url) return null;
+  if (/^https?:\/\/i\.imgur\.com/.test(url)) return url;
+  if (/^https?:\/\/i\.ibb\.co/.test(url))   return url;
+  const drive = _driveThumb(url);
+  if (drive) return drive;
+  return null; // prnt.sc, lightshot etc. — exibir como link
+}
+
+function _renderAdminScreenshot(url, index) {
+  if (!url) return "";
+  const src = _safeScreenshotSrc(url);
+  const linkHtml = `<a href="${escapeHtml(url)}" target="_blank" rel="noopener"
+      class="admin-screenshot-link" title="Abrir screenshot ${index + 1}">
+      <i class="fas fa-image"></i> Screenshot ${index + 1}
+    </a>`;
+  if (src) {
+    return `
+      <div class="admin-screenshot-wrap">
+        <a href="${escapeHtml(url)}" target="_blank" rel="noopener" title="Abrir original">
+          <img src="${src}" alt="Screenshot ${index + 1}" class="admin-screenshot-img"
+               onerror="this.parentElement.parentElement.innerHTML='${linkHtml.replace(/'/g, "&#39;")}'" />
+        </a>
+      </div>`;
+  }
+  return `<div class="admin-screenshot-wrap">${linkHtml}</div>`;
+}
 
 window.loadAdminMaps = async function(filter = "pending") {
   _currentMapAdminFilter = filter;
   const container = document.getElementById("adminMapsList");
   if (!container) return;
 
+  // Atualizar botões de filtro
+  document.querySelectorAll('[data-map-admin-filter]').forEach(b => {
+    b.classList.toggle('active', b.dataset.mapAdminFilter === filter);
+  });
+
   container.innerHTML = '<div class="loading"><i class="fas fa-spinner fa-spin"></i> Carregando...</div>';
 
-  try {
-    let maps;
-    if (filter === "pending") {
-      maps = await getPendingMaps();
-    } else {
-      const allMaps = await getAllMaps();
-      maps = allMaps.filter(m => m.status === filter);
-    }
+  if (_unsubAdminMaps) { _unsubAdminMaps(); _unsubAdminMaps = null; }
+
+  // Usar listener em tempo real
+  _unsubAdminMaps = listenAllMaps((allMaps) => {
+    let maps = allMaps;
+    if (filter !== "all") maps = allMaps.filter(m => m.status === filter);
+
+    // Atualizar badge de pendentes
+    const pendingCount = allMaps.filter(m => m.status === "pending").length;
+    _set("pendingMapsCount", el => el.textContent = pendingCount > 0 ? pendingCount : "");
 
     if (maps.length === 0) {
-      container.innerHTML = `<div class="empty-state"><p>Nenhum mapa ${filter}</p></div>`;
+      container.innerHTML = `
+        <div class="empty-state">
+          <i class="fas fa-map"></i>
+          <p>Nenhum mapa ${filter === 'pending' ? 'pendente' : filter === 'approved' ? 'aprovado' : filter === 'rejected' ? 'rejeitado' : ''}</p>
+        </div>`;
       return;
     }
 
-    container.innerHTML = maps.map(map => `
-      <div class="submission-item">
-        <div class="submission-header">
-          <div>
-            <strong>${escapeHtml(map.title)}</strong>
-            <p style="margin: 0.25rem 0; color: var(--text-muted); font-size: 0.85rem;">
-              Por ${escapeHtml(map.authorName)}
-            </p>
+    container.innerHTML = maps.map(map => {
+      const screenshots = Array.isArray(map.screenshots) ? map.screenshots : [];
+      const previewSrc  = screenshots.length ? _safeScreenshotSrc(screenshots[0]) : null;
+      const statusBadge = {
+        pending:  '<span class="status-badge pending">⏳ Pendente</span>',
+        approved: '<span class="status-badge approved">✅ Aprovado</span>',
+        rejected: '<span class="status-badge rejected">❌ Rejeitado</span>'
+      }[map.status] || '';
+
+      return `
+        <div class="admin-map-card" id="amap-${map.id}">
+          <div class="admin-map-preview">
+            ${previewSrc
+              ? `<img src="${previewSrc}" alt="${escapeHtml(map.title)}" onerror="this.style.display='none'">`
+              : `<div class="map-preview-placeholder"><i class="fas fa-map" style="font-size:2rem;color:var(--text-muted)"></i></div>`}
+            ${statusBadge}
           </div>
-          <span class="submission-date">
-            ${new Date(map.created_at).toLocaleDateString('pt-BR')}
-          </span>
-        </div>
+          <div class="admin-map-body">
+            <div class="admin-map-header">
+              <div>
+                <strong class="admin-map-title">${escapeHtml(map.title)}</strong>
+                <div class="admin-map-meta">
+                  Por <strong>${escapeHtml(map.authorName)}</strong> ·
+                  ${new Date(map.created_at || 0).toLocaleDateString('pt-BR')}
+                </div>
+              </div>
+              <div class="admin-map-stats">
+                <span title="Curtidas"><i class="fas fa-heart"></i> ${map.likes || 0}</span>
+                <span title="Downloads"><i class="fas fa-download"></i> ${map.downloads || 0}</span>
+                <span title="Views"><i class="fas fa-eye"></i> ${map.views || 0}</span>
+              </div>
+            </div>
 
-        <div class="map-preview-admin" style="margin: 1rem 0;">
-          <img src="${map.screenshots[0]}" alt="Preview" style="max-width: 300px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1);">
-        </div>
+            <p class="admin-map-desc">${escapeHtml((map.description || "").substring(0, 150))}${(map.description || "").length > 150 ? '…' : ''}</p>
 
-        <p style="margin: 1rem 0; line-height: 1.6; color: var(--text-secondary);">
-          ${escapeHtml(map.description).substring(0, 200)}${map.description.length > 200 ? '...' : ''}
-        </p>
+            ${map.topics && map.topics.length > 0 ? `
+              <div class="admin-map-tags">
+                ${map.topics.map(t => `<span class="topic-tag">${escapeHtml(t)}</span>`).join('')}
+              </div>
+            ` : ''}
 
-        ${map.topics && map.topics.length > 0 ? `
-          <div style="margin: 0.75rem 0;">
-            <strong style="font-size: 0.85rem;">Tags:</strong>
-            ${map.topics.map(t => `<span style="background: rgba(201,168,76,0.15); border: 1px solid rgba(201,168,76,0.3); color: var(--gold); padding: 0.25rem 0.5rem; border-radius: 4px; font-size: 0.75rem; margin-right: 0.5rem;">${escapeHtml(t)}</span>`).join('')}
+            ${map.status === 'rejected' && map.rejectionReason ? `
+              <div class="map-rejection" style="margin:.5rem 0">
+                <i class="fas fa-exclamation-circle"></i>
+                <strong>Motivo:</strong> ${escapeHtml(map.rejectionReason)}
+              </div>
+            ` : ''}
+
+            ${map.status === 'approved' ? `
+              <div class="admin-map-rewards">
+                <span><i class="fas fa-coins"></i> +${map.coinsReward || 0} moedas</span>
+                <span><i class="fas fa-gem"></i> +${map.tokensReward || 0} tokens</span>
+                ${map.rewardClaimed ? '<span style="color:var(--green)"><i class="fas fa-check"></i> Recompensa entregue</span>' : ''}
+              </div>
+            ` : ''}
+
+            <div class="admin-map-actions">
+              <button class="btn-secondary btn-review-map" data-id="${map.id}" style="font-size:.82rem">
+                <i class="fas fa-search"></i> Revisar
+              </button>
+              <a href="${escapeHtml(map.driveLink || '#')}" target="_blank" rel="noopener"
+                 class="btn-secondary" style="font-size:.82rem">
+                <i class="fas fa-external-link-alt"></i> Drive
+              </a>
+              ${map.status === 'pending' ? `
+                <button class="btn-approve-map btn-success" data-id="${map.id}" style="font-size:.82rem">
+                  <i class="fas fa-check"></i> Aprovar
+                </button>
+                <button class="btn-reject-map btn-danger" data-id="${map.id}" style="font-size:.82rem">
+                  <i class="fas fa-times"></i> Rejeitar
+                </button>
+              ` : ''}
+            </div>
           </div>
-        ` : ''}
-
-        <div class="submission-actions">
-          <a href="${map.driveLink}" target="_blank" class="btn-secondary">
-            <i class="fas fa-external-link-alt"></i> Ver Drive
-          </a>
-          
-          ${filter === 'pending' ? `
-            <button class="btn-approve-map" data-id="${map.id}">
-              <i class="fas fa-check"></i> Aprovar
-            </button>
-            <button class="btn-reject-map" data-id="${map.id}">
-              <i class="fas fa-times"></i> Rejeitar
-            </button>
-          ` : ''}
-        </div>
-      </div>
-    `).join('');
+        </div>`;
+    }).join('');
 
     // Event listeners
+    container.querySelectorAll('.btn-review-map').forEach(btn => {
+      btn.addEventListener('click', () => openMapReviewModal(btn.dataset.id));
+    });
     container.querySelectorAll('.btn-approve-map').forEach(btn => {
       btn.addEventListener('click', () => handleApproveMap(btn.dataset.id));
     });
-
     container.querySelectorAll('.btn-reject-map').forEach(btn => {
       btn.addEventListener('click', () => handleRejectMap(btn.dataset.id));
     });
-
-  } catch (err) {
-    console.error('Erro ao carregar mapas:', err);
-    container.innerHTML = '<div class="empty-state"><p>Erro ao carregar mapas.</p></div>';
-  }
+  });
 };
 
-async function handleApproveMap(mapId) {
-  const coins = prompt("Quantas MOEDAS dar de recompensa?", "50");
-  if (coins === null) return;
+/* ── Modal de revisão detalhada de mapa ── */
+async function openMapReviewModal(mapId) {
+  const modal   = document.getElementById("mapReviewModal");
+  const content = document.getElementById("mapReviewContent");
+  if (!modal || !content) {
+    // Fallback: usar modal genérico de print
+    await _openMapReviewFallback(mapId); return;
+  }
+  content.innerHTML = '<div class="loading"><i class="fas fa-spinner fa-spin"></i> Carregando...</div>';
+  modal.style.display = "flex";
 
+  try {
+    // Ler direto do DB sem incrementar views (admin)
+    const { get, ref } = await import("../firebase/services-config.js");
+    const { db }       = await import("../firebase/services-config.js");
+    const snap = await get(ref(db, `maps/${mapId}`));
+    if (!snap.exists()) throw new Error("Mapa não encontrado");
+    const map = snap.val();
+    const screenshots = Array.isArray(map.screenshots) ? map.screenshots : [];
+
+    content.innerHTML = `
+      <div class="map-review-section">
+        <div class="map-review-header">
+          <h2>${escapeHtml(map.title)}</h2>
+          <p>Por <strong>${escapeHtml(map.authorName)}</strong> ·
+             Enviado em ${new Date(map.created_at || 0).toLocaleString('pt-BR')}</p>
+          <div class="admin-map-stats" style="margin-top:.5rem">
+            <span><i class="fas fa-heart"></i> ${map.likes || 0} curtidas</span>
+            <span><i class="fas fa-download"></i> ${map.downloads || 0} downloads</span>
+            <span><i class="fas fa-eye"></i> ${map.views || 0} views</span>
+          </div>
+        </div>
+
+        <div class="map-review-section-block">
+          <h3><i class="fas fa-images"></i> Screenshots (${screenshots.length})</h3>
+          <div class="admin-screenshots-grid">
+            ${screenshots.length > 0
+              ? screenshots.map((url, i) => _renderAdminScreenshot(url, i)).join('')
+              : '<p style="color:var(--text-muted)">Nenhum screenshot</p>'}
+          </div>
+        </div>
+
+        <div class="map-review-section-block">
+          <h3><i class="fas fa-info-circle"></i> Descrição</h3>
+          <p style="white-space:pre-wrap;line-height:1.7">${escapeHtml(map.description || "")}</p>
+        </div>
+
+        ${map.topics && map.topics.length > 0 ? `
+          <div class="map-review-section-block">
+            <h3><i class="fas fa-tags"></i> Tags</h3>
+            <div class="topics-list">
+              ${map.topics.map(t => `<span class="topic-tag">${escapeHtml(t)}</span>`).join('')}
+            </div>
+          </div>
+        ` : ''}
+
+        <div class="map-review-section-block">
+          <h3><i class="fas fa-link"></i> Link do Drive</h3>
+          <a href="${escapeHtml(map.driveLink || '#')}" target="_blank" rel="noopener"
+             class="btn-secondary" style="display:inline-flex;align-items:center;gap:.4rem">
+            <i class="fas fa-external-link-alt"></i>
+            ${escapeHtml(map.driveLink || '—')}
+          </a>
+        </div>
+
+        ${map.status === 'pending' ? `
+          <div class="map-review-actions" style="margin-top:1.5rem;display:flex;gap:.75rem;flex-wrap:wrap">
+            <button class="btn-success" id="reviewApproveBtn" data-id="${map.id}">
+              <i class="fas fa-check"></i> Aprovar Mapa
+            </button>
+            <button class="btn-danger" id="reviewRejectBtn" data-id="${map.id}">
+              <i class="fas fa-times"></i> Rejeitar Mapa
+            </button>
+          </div>
+        ` : `
+          <div style="margin-top:1rem">
+            <span class="status-badge ${map.status}">
+              ${map.status === 'approved' ? '✅ Aprovado' : '❌ Rejeitado'}
+            </span>
+            ${map.rejectionReason ? `<p style="margin:.5rem 0;color:var(--text-muted)">Motivo: ${escapeHtml(map.rejectionReason)}</p>` : ''}
+          </div>
+        `}
+      </div>`;
+
+    document.getElementById("reviewApproveBtn")?.addEventListener("click", async () => {
+      modal.style.display = "none";
+      await handleApproveMap(mapId);
+    });
+    document.getElementById("reviewRejectBtn")?.addEventListener("click", async () => {
+      modal.style.display = "none";
+      await handleRejectMap(mapId);
+    });
+
+  } catch (err) {
+    content.innerHTML = `<div class="empty-state"><p>Erro: ${escapeHtml(err.message)}</p></div>`;
+  }
+}
+
+async function _openMapReviewFallback(mapId) {
+  alert("Modal de revisão não encontrado. Usando fallback.");
+}
+
+async function handleApproveMap(mapId) {
+  const coins = prompt("Quantas MOEDAS dar de recompensa ao autor?", "50");
+  if (coins === null) return;
   const tokens = prompt("Quantos TOKENS dar de recompensa?", "10");
   if (tokens === null) return;
 
+  const coinsNum  = Math.max(0, parseInt(coins)  || 50);
+  const tokensNum = Math.max(0, parseInt(tokens) || 10);
+
+  const btn = document.querySelector(`[data-id="${mapId}"].btn-approve-map`);
+  if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>'; }
+
   try {
     const adminUid = window.RPG?.getFbUser()?.uid;
-    if (!adminUid) {
-      window.showToast?.("Erro: usuário não autenticado", "error");
-      return;
-    }
+    if (!adminUid) throw new Error("Usuário não autenticado");
 
-    await approveMap(mapId, adminUid, {
-      coins: parseInt(coins) || 50,
-      tokens: parseInt(tokens) || 10
-    });
-
-    window.showToast?.("✅ Mapa aprovado! Recompensa concedida", "success");
-    await loadAdminMaps(_currentMapAdminFilter);
+    await approveMap(mapId, adminUid, { coins: coinsNum, tokens: tokensNum });
+    window.showToast?.(`✅ Mapa aprovado! +${coinsNum} moedas e +${tokensNum} tokens ao autor.`, "success");
+    // listener em tempo real atualiza automaticamente
   } catch (err) {
     console.error('Erro ao aprovar mapa:', err);
-    window.showToast?.("Erro ao aprovar mapa: " + err.message, "error");
+    window.showToast?.("Erro ao aprovar: " + (err.message || ""), "error");
+    if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-check"></i> Aprovar'; }
   }
 }
 
 async function handleRejectMap(mapId) {
-  const reason = prompt("Motivo da rejeição:");
-  if (!reason) return;
+  const reason = prompt("Motivo da rejeição (será exibido ao autor):");
+  if (reason === null) return;
+  if (!reason.trim()) {
+    window.showToast?.("Informe um motivo para rejeitar o mapa.", "warning");
+    return;
+  }
 
   try {
     const adminUid = window.RPG?.getFbUser()?.uid;
-    if (!adminUid) {
-      window.showToast?.("Erro: usuário não autenticado", "error");
-      return;
-    }
-
-    await rejectMap(mapId, adminUid, reason);
-
-    window.showToast?.("❌ Mapa rejeitado", "success");
-    await loadAdminMaps(_currentMapAdminFilter);
+    if (!adminUid) throw new Error("Usuário não autenticado");
+    await rejectMap(mapId, adminUid, reason.trim());
+    window.showToast?.("❌ Mapa rejeitado. O autor será notificado.", "warning");
+    // listener em tempo real atualiza automaticamente
   } catch (err) {
     console.error('Erro ao rejeitar mapa:', err);
-    window.showToast?.("Erro ao rejeitar mapa: " + err.message, "error");
+    window.showToast?.("Erro ao rejeitar: " + (err.message || ""), "error");
   }
 }
 
-// Event listeners para filtros de mapas
-document.querySelectorAll('[data-map-admin-filter]').forEach(btn => {
-  btn.addEventListener('click', () => {
+// Event listeners para filtros e refresh de mapas (fora do DOMContentLoaded pois são delegados)
+document.addEventListener("click", (e) => {
+  const filterBtn = e.target.closest('[data-map-admin-filter]');
+  if (filterBtn) {
     document.querySelectorAll('[data-map-admin-filter]').forEach(b => b.classList.remove('active'));
-    btn.classList.add('active');
-    loadAdminMaps(btn.dataset.mapAdminFilter);
+    filterBtn.classList.add('active');
+    window.loadAdminMaps(filterBtn.dataset.mapAdminFilter);
+  }
+});
+
+document.getElementById("refreshAdminMapsBtn")?.addEventListener("click", () => {
+  window.loadAdminMaps(_currentMapAdminFilter);
+});
+
+/* ── Fechar modal de revisão ── */
+document.addEventListener("DOMContentLoaded", () => {
+  document.getElementById("closeMapReviewModal")?.addEventListener("click", () => {
+    document.getElementById("mapReviewModal").style.display = "none";
+  });
+  document.getElementById("mapReviewModal")?.addEventListener("click", e => {
+    if (e.target.id === "mapReviewModal") e.target.style.display = "none";
   });
 });
 
-// Refresh button
-document.getElementById("refreshAdminMapsBtn")?.addEventListener("click", () => {
-  loadAdminMaps(_currentMapAdminFilter);
-});
+/* ════════════════════════════════════════════════════════════════
+   REGIÕES ADMIN  –  mapas aprovados (editar/rejeitar)
+════════════════════════════════════════════════════════════════ */
+let _unsubRegionsAdmin = null;
+
+function loadRegionsAdmin() {
+  const container = document.getElementById("regionsAdminList");
+  if (!container) return;
+
+  container.innerHTML = '<div class="loading-spinner"><i class="fas fa-spinner fa-spin"></i> Carregando...</div>';
+
+  if (_unsubRegionsAdmin) { _unsubRegionsAdmin(); _unsubRegionsAdmin = null; }
+
+  _unsubRegionsAdmin = listenAllMaps((allMaps) => {
+    const approved = allMaps.filter(m => m.status === "approved");
+    approved.sort((a, b) => (b.likes || 0) - (a.likes || 0));
+
+    if (approved.length === 0) {
+      container.innerHTML = `
+        <div class="empty-state">
+          <i class="fas fa-globe-americas"></i>
+          <p>Nenhum mapa aprovado ainda.</p>
+        </div>`;
+      return;
+    }
+
+    container.innerHTML = approved.map((map, index) => {
+      const screenshots = Array.isArray(map.screenshots) ? map.screenshots : [];
+      const previewSrc  = screenshots.length ? _safeScreenshotSrc(screenshots[0]) : null;
+
+      return `
+        <div class="admin-map-card" id="region-${map.id}">
+          <div class="admin-map-preview" style="max-width:140px;min-width:100px">
+            <div style="position:relative">
+              <span class="region-rank-badge">#${index + 1}</span>
+              ${previewSrc
+                ? `<img src="${previewSrc}" alt="${escapeHtml(map.title)}" onerror="this.style.display='none'">`
+                : `<div class="map-preview-placeholder"><i class="fas fa-map"></i></div>`}
+            </div>
+          </div>
+          <div class="admin-map-body">
+            <div class="admin-map-header">
+              <div>
+                <strong class="admin-map-title">${escapeHtml(map.title)}</strong>
+                <div class="admin-map-meta">Por <strong>${escapeHtml(map.authorName)}</strong></div>
+              </div>
+              <div class="admin-map-stats">
+                <span><i class="fas fa-heart"></i> ${map.likes || 0}</span>
+                <span><i class="fas fa-download"></i> ${map.downloads || 0}</span>
+                <span><i class="fas fa-eye"></i> ${map.views || 0}</span>
+              </div>
+            </div>
+
+            <div class="admin-map-rewards">
+              <span><i class="fas fa-coins"></i> ${map.coinsReward || 0} moedas</span>
+              <span><i class="fas fa-gem"></i> ${map.tokensReward || 0} tokens</span>
+              ${map.rewardClaimed
+                ? '<span style="color:var(--green)"><i class="fas fa-check"></i> Recompensa entregue</span>'
+                : '<span style="color:var(--gold)"><i class="fas fa-clock"></i> Recompensa pendente</span>'}
+            </div>
+
+            <div class="admin-map-actions" style="margin-top:.75rem">
+              <button class="btn-secondary btn-review-map" data-id="${map.id}" style="font-size:.82rem">
+                <i class="fas fa-search"></i> Detalhes
+              </button>
+              <a href="${escapeHtml(map.driveLink || '#')}" target="_blank" rel="noopener"
+                 class="btn-secondary" style="font-size:.82rem">
+                <i class="fas fa-external-link-alt"></i> Drive
+              </a>
+              <button class="btn-reject-map btn-danger" data-id="${map.id}" style="font-size:.82rem">
+                <i class="fas fa-times"></i> Remover da Região
+              </button>
+            </div>
+          </div>
+        </div>`;
+    }).join('');
+
+    // Listeners
+    container.querySelectorAll('.btn-review-map').forEach(btn => {
+      btn.addEventListener('click', () => openMapReviewModal(btn.dataset.id));
+    });
+    container.querySelectorAll('.btn-reject-map').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const reason = prompt("Motivo para remover esta região?");
+        if (reason === null) return;
+        try {
+          const adminUid = window.RPG?.getFbUser()?.uid;
+          await rejectMap(btn.dataset.id, adminUid, reason.trim() || "Removido pelo admin");
+          window.showToast?.("❌ Mapa removido das regiões.", "warning");
+        } catch (err) {
+          window.showToast?.("Erro: " + (err.message || ""), "error");
+        }
+      });
+    });
+  });
+
+  // Botão refresh
+  const refreshBtn = document.getElementById("refreshRegionsAdminBtn");
+  if (refreshBtn && !refreshBtn._bound) {
+    refreshBtn._bound = true;
+    refreshBtn.addEventListener("click", loadRegionsAdmin);
+  }
+}
