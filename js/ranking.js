@@ -10,8 +10,9 @@ import "../firebase/session-manager.js";
 import { listenRanking } from "../firebase/database.js";
 
 /* ─── Listener ativo ────────────────────────────────────────── */
-let _unsubRanking  = null;
-let _currentPeriod = "total";
+let _unsubRanking   = null;
+let _currentPeriod  = "total";
+let _currentCurrency = "coins"; // 'coins' ou 'tokens'
 
 /* ════════════════════════════════════════════════════════════════
    Carregar ranking – tempo real
@@ -39,9 +40,16 @@ window.loadRanking = function loadRankingPage(period = "total") {
       return;
     }
 
+    // Ordenar por moeda selecionada (coins ou tokens)
+    const sortedRanking = [...ranking].sort((a, b) => {
+      const valA = _currentCurrency === 'tokens' ? (a.tokens || 0) : (a.coins || 0);
+      const valB = _currentCurrency === 'tokens' ? (b.tokens || 0) : (b.coins || 0);
+      return valB - valA;
+    }).map((r, i) => ({ ...r, position: i + 1 }));
+
     /* Pódio top 3 */
     if (podium) {
-      const top3  = ranking.slice(0, 3);
+      const top3  = sortedRanking.slice(0, 3);
       const order = [1, 0, 2]; // visual: 2º, 1º, 3º
       podium.innerHTML = order
         .filter(i => top3[i])
@@ -53,7 +61,7 @@ window.loadRanking = function loadRankingPage(period = "total") {
     const posIcons = { 1:"🥇", 2:"🥈", 3:"🥉" };
 
     /* Badges dinâmicos: mapear IDs de conquistas para ícones */
-    list.innerHTML = ranking.map(r => {
+    list.innerHTML = sortedRanking.map(r => {
       const isMe  = r.uid === uid;
       const avatarHtml = r.iconUrl
         ? `<div class="ranking-avatar-emoji">${escapeHtml(r.iconUrl)}</div>`
@@ -81,8 +89,10 @@ window.loadRanking = function loadRankingPage(period = "total") {
         </span>
         <span class="ranking-level">Nv.${r.level||1}</span>
         <span class="ranking-coins">
-          <i class="fas fa-coins" style="font-size:.8rem"></i>
-          ${(r.coins||0).toLocaleString("pt-BR")}
+          ${_currentCurrency === 'tokens' 
+            ? `<i class="fas fa-gem" style="font-size:.8rem;color:#c084fc"></i> ${(r.tokens||0).toLocaleString("pt-BR")}`
+            : `<i class="fas fa-coins" style="font-size:.8rem"></i> ${(r.coins||0).toLocaleString("pt-BR")}`
+          }
         </span>
       </div>`;
     }).join("");
@@ -118,8 +128,10 @@ function renderPodiumItem(user, currentUid) {
         ${escapeHtml(user.nickname || user.username || "?")}
       </span>
       <span class="podium-coins">
-        <i class="fas fa-coins" style="font-size:.7rem"></i>
-        ${(user.coins||0).toLocaleString("pt-BR")}
+        ${_currentCurrency === 'tokens'
+          ? `<i class="fas fa-gem" style="font-size:.7rem;color:#c084fc"></i> ${(user.tokens||0).toLocaleString("pt-BR")}`
+          : `<i class="fas fa-coins" style="font-size:.7rem"></i> ${(user.coins||0).toLocaleString("pt-BR")}`
+        }
       </span>
       <div class="podium-stand">${labels[user.position] || user.position}</div>
     </div>`;
@@ -135,6 +147,16 @@ document.addEventListener("DOMContentLoaded", () => {
       rankingPage.querySelectorAll(".filter-btn[data-period]").forEach(b => b.classList.remove("active"));
       btn.classList.add("active");
       window.loadRanking(btn.dataset.period);
+    });
+  });
+
+  /* Toggle de moeda (Coins/Tokens) */
+  rankingPage.querySelectorAll(".currency-toggle-btn").forEach(btn => {
+    btn.addEventListener("click", () => {
+      rankingPage.querySelectorAll(".currency-toggle-btn").forEach(b => b.classList.remove("active"));
+      btn.classList.add("active");
+      _currentCurrency = btn.dataset.currency;
+      window.loadRanking(_currentPeriod);
     });
   });
 

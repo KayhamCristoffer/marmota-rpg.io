@@ -57,6 +57,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       case "quests":         loadAdminQuests();  break;
       case "users":          loadUsers();        break;
       case "maps":           window.loadAdminMaps("pending"); break;
+      case "regions":        loadAdminRegions(); break;
       case "ranking-admin":  setupRankingAdmin(); loadRankingAdmin(); break;
       case "achievements":   loadAchievements(); break;
       case "regions-admin":  loadRegionsAdmin(); break;
@@ -1024,8 +1025,16 @@ window.loadAdminMaps = async function(filter = "pending") {
       return;
     }
 
-    container.innerHTML = maps.map(map => {
+    // Renderizar em grid único
+    container.innerHTML = `<div class="admin-maps-grid">${maps.map(map => {
       const screenshots = Array.isArray(map.screenshots) ? map.screenshots : [];
+      const mapStyle = map.mapStyle || 'custom'; // PvP, LuckyBlock, Cidade, Survival, Custom
+      const styleIcons = {
+        pvp: '⚔️', luckyblock: '🎲', cidade: '🏙️', survival: '🏕️', 
+        parkour: '🏃', minigame: '🎮', rpg: '🗡️', custom: '🗺️'
+      };
+      const styleIcon = styleIcons[mapStyle.toLowerCase()] || '🗺️';
+      
       const previewSrc  = screenshots.length ? _safeScreenshotSrc(screenshots[0]) : null;
       const statusBadge = {
         pending:  '<span class="status-badge pending">⏳ Pendente</span>',
@@ -1039,6 +1048,7 @@ window.loadAdminMaps = async function(filter = "pending") {
             ${previewSrc
               ? `<img src="${previewSrc}" alt="${escapeHtml(map.title)}" onerror="this.style.display='none'">`
               : `<div class="map-preview-placeholder"><i class="fas fa-map" style="font-size:2rem;color:var(--text-muted)"></i></div>`}
+            <div class="map-style-badge" title="Estilo: ${escapeHtml(mapStyle)}">${styleIcon}</div>
             ${statusBadge}
           </div>
           <div class="admin-map-body">
@@ -1046,6 +1056,7 @@ window.loadAdminMaps = async function(filter = "pending") {
               <div>
                 <strong class="admin-map-title">${escapeHtml(map.title)}</strong>
                 <div class="admin-map-meta">
+                  <span class="map-style-label">${escapeHtml(mapStyle)}</span> ·
                   Por <strong>${escapeHtml(map.authorName)}</strong> ·
                   ${new Date(map.created_at || 0).toLocaleDateString('pt-BR')}
                 </div>
@@ -1099,7 +1110,7 @@ window.loadAdminMaps = async function(filter = "pending") {
             </div>
           </div>
         </div>`;
-    }).join('');
+    }).join('')}</div>`;
 
     // Event listeners
     container.querySelectorAll('.btn-review-map').forEach(btn => {
@@ -1389,3 +1400,164 @@ function loadRegionsAdmin() {
     refreshBtn.addEventListener("click", loadRegionsAdmin);
   }
 }
+
+/* ════════════════════════════════════════════════════════════════
+   GERENCIAR REGIÕES (Mapas Aprovados) - MELHORADO
+════════════════════════════════════════════════════════════════ */
+
+async function loadAdminRegions() {
+  const container = document.getElementById("adminRegionsList");
+  if (!container) return;
+
+  container.innerHTML = '<div class="loading"><i class="fas fa-spinner fa-spin"></i> Carregando regiões...</div>';
+
+  try {
+    const allMaps = await getAllMaps();
+    const approvedMaps = allMaps.filter(m => m.status === "approved");
+
+    if (approvedMaps.length === 0) {
+      container.innerHTML = `
+        <div class="empty-state">
+          <i class="fas fa-map" style="font-size: 3rem; opacity: 0.3; margin-bottom: 1rem;"></i>
+          <p>Nenhum mapa aprovado ainda</p>
+        </div>
+      `;
+      return;
+    }
+
+    // Ordenar por likes
+    approvedMaps.sort((a, b) => (b.likes || 0) - (a.likes || 0));
+
+    // Renderizar em grid único (como Gerenciar Mapas)
+    container.innerHTML = `<div class="admin-maps-grid">${approvedMaps.map(map => {
+      const screenshots = Array.isArray(map.screenshots) ? map.screenshots : [];
+      const mapStyle = map.mapStyle || 'custom';
+      const styleIcons = {
+        pvp: '⚔️', luckyblock: '🎲', cidade: '🏙️', survival: '🏕️', 
+        parkour: '🏃', minigame: '🎮', rpg: '🗡️', custom: '🗺️'
+      };
+      const styleIcon = styleIcons[mapStyle.toLowerCase()] || '🗺️';
+      const previewSrc = screenshots.length ? _safeScreenshotSrc(screenshots[0]) : null;
+
+      return `
+        <div class="admin-map-card">
+          <div class="admin-map-preview">
+            ${previewSrc
+              ? `<img src="${previewSrc}" alt="${escapeHtml(map.title)}" onerror="this.style.display='none'">`
+              : `<div class="map-preview-placeholder"><i class="fas fa-map" style="font-size:2rem;color:var(--text-muted)"></i></div>`}
+            <div class="map-style-badge" title="Estilo: ${escapeHtml(mapStyle)}">${styleIcon}</div>
+            <span class="status-badge approved">✅ Aprovado</span>
+          </div>
+          <div class="admin-map-body">
+            <div class="admin-map-header">
+              <div>
+                <strong class="admin-map-title">${escapeHtml(map.title)}</strong>
+                <div class="admin-map-meta">
+                  <span class="map-style-label">${escapeHtml(mapStyle)}</span> ·
+                  Por <strong>${escapeHtml(map.authorName)}</strong>
+                </div>
+              </div>
+              <div class="admin-map-stats">
+                <span title="Curtidas"><i class="fas fa-heart"></i> ${map.likes || 0}</span>
+                <span title="Favoritos"><i class="fas fa-star"></i> ${map.favorites || 0}</span>
+                <span title="Views"><i class="fas fa-eye"></i> ${map.views || 0}</span>
+              </div>
+            </div>
+
+            <p class="admin-map-desc">${escapeHtml((map.description || "").substring(0, 120))}${(map.description || "").length > 120 ? '…' : ''}</p>
+
+            ${map.topics && map.topics.length > 0 ? `
+              <div class="admin-map-tags">
+                ${map.topics.slice(0, 4).map(t => `<span class="topic-tag">${escapeHtml(t)}</span>`).join('')}
+              </div>
+            ` : ''}
+
+            <div class="admin-map-rewards" style="margin-top:.5rem">
+              <span><i class="fas fa-coins"></i> +${map.coinsReward || 0}</span>
+              <span><i class="fas fa-gem"></i> +${map.tokensReward || 0}</span>
+            </div>
+
+            <div class="admin-map-actions">
+              <a href="${escapeHtml(map.driveLink || '#')}" target="_blank" class="btn-secondary" style="font-size:.82rem">
+                <i class="fas fa-external-link-alt"></i> Drive
+              </a>
+              <button class="btn-secondary btn-edit-region" data-id="${map.id}" style="font-size:.82rem">
+                <i class="fas fa-edit"></i> Editar
+              </button>
+              <button class="btn-danger btn-delete-region" data-id="${map.id}" data-title="${escapeHtml(map.title)}" style="font-size:.82rem">
+                <i class="fas fa-trash"></i> Deletar
+              </button>
+            </div>
+          </div>
+        </div>
+      `;
+    }).join('')}</div>`;
+
+    // Event listeners
+    container.querySelectorAll('.btn-edit-region').forEach(btn => {
+      btn.addEventListener('click', () => editRegionMap(btn.dataset.id));
+    });
+
+    container.querySelectorAll('.btn-delete-region').forEach(btn => {
+      btn.addEventListener('click', () => deleteRegionMap(btn.dataset.id, btn.dataset.title));
+    });
+
+  } catch (err) {
+    console.error('Erro ao carregar regiões:', err);
+    container.innerHTML = '<div class="empty-state"><p>Erro ao carregar regiões.</p></div>';
+  }
+}
+
+async function editRegionMap(mapId) {
+  if (!confirm("Deseja editar este mapa? Ele voltará para status 'pendente' para revisão.")) return;
+
+  try {
+    const adminUid = window.RPG?.getFbUser()?.uid;
+    if (!adminUid) {
+      window.showToast?.("Erro: usuário não autenticado", "error");
+      return;
+    }
+
+    const { update, ref, db } = await import("../firebase/database.js");
+    await update(ref(db, `maps/${mapId}`), {
+      status: "pending",
+      approvedBy: null,
+      approvedAt: null,
+      rewardClaimed: false
+    });
+
+    window.showToast?.("✅ Mapa movido para revisão", "success");
+    await loadAdminRegions();
+  } catch (err) {
+    console.error('Erro ao editar região:', err);
+    window.showToast?.("Erro ao editar região: " + err.message, "error");
+  }
+}
+
+async function deleteRegionMap(mapId, mapTitle) {
+  if (!confirm(`Deseja DELETAR permanentemente o mapa "${mapTitle}"? Esta ação não pode ser desfeita!`)) return;
+
+  try {
+    const adminUid = window.RPG?.getFbUser()?.uid;
+    if (!adminUid) {
+      window.showToast?.("Erro: usuário não autenticado", "error");
+      return;
+    }
+
+    const { remove, ref, db } = await import("../firebase/database.js");
+    
+    await remove(ref(db, `maps/${mapId}`));
+    await remove(ref(db, `mapLikes/${mapId}`));
+
+    window.showToast?.("🗑️ Mapa deletado com sucesso", "success");
+    await loadAdminRegions();
+  } catch (err) {
+    console.error('Erro ao deletar região:', err);
+    window.showToast?.("Erro ao deletar região: " + err.message, "error");
+  }
+}
+
+// Refresh button
+document.getElementById("refreshAdminRegionsBtn")?.addEventListener("click", () => {
+  loadAdminRegions();
+});

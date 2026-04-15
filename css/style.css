@@ -4300,3 +4300,106 @@ input, select, textarea { font-family: inherit; }
 .region-card-actions button {
   flex: 1;
 }
+
+/* ═══════════════════════════════════════════════════════════════
+   ADMIN MAPS GRID (Único para Gerenciar Mapas e Regiões)
+════════════════════════════════════════════════════════════════ */
+.admin-maps-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 1.5rem;
+}
+
+.map-style-badge {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  background: rgba(0,0,0,0.8);
+  color: #fff;
+  padding: 0.4rem 0.6rem;
+  border-radius: 8px;
+  font-size: 1.2rem;
+  line-height: 1;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+  z-index: 2;
+}
+
+.map-style-label {
+  display: inline-block;
+  background: rgba(240,192,64,0.15);
+  border: 1px solid rgba(240,192,64,0.3);
+  color: var(--gold);
+  padding: 0.15rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: capitalize;
+}
+
+@media (max-width: 768px) {
+  .admin-maps-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   RANKING CURRENCY TOGGLE
+════════════════════════════════════════════════════════════════ */
+.ranking-currency-toggle {
+  display: flex;
+  gap: 0.75rem;
+  margin-bottom: 1.5rem;
+  justify-content: center;
+}
+
+.currency-toggle-btn {
+  padding: 0.75rem 1.5rem;
+  border: 2px solid rgba(255,255,255,.08);
+  border-radius: 12px;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: .9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all .2s ease;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.currency-toggle-btn:hover {
+  border-color: rgba(240,192,64,.4);
+  background: rgba(240,192,64,.05);
+}
+
+.currency-toggle-btn.active {
+  background: rgba(240,192,64,.15);
+  border-color: var(--gold);
+  color: var(--gold);
+}
+
+.currency-toggle-btn[data-currency="tokens"] {
+  border-color: rgba(168,85,247,.15);
+}
+
+.currency-toggle-btn[data-currency="tokens"]:hover {
+  border-color: rgba(168,85,247,.4);
+  background: rgba(168,85,247,.05);
+}
+
+.currency-toggle-btn[data-currency="tokens"].active {
+  background: rgba(168,85,247,.15);
+  border-color: #a855f7;
+  color: #c084fc;
+}
+
+@media (max-width: 576px) {
+  .ranking-currency-toggle {
+    flex-direction: column;
+  }
+  
+  .currency-toggle-btn {
+    width: 100%;
+    justify-content: center;
+  }
+}
